@@ -23,7 +23,7 @@ export default function Home() {
           {/* Delete this <Card /> in your own app */}
           <Card border="1px" maxW="90vw" mx="auto">
             <CardHeader>
-              <Heading size="md">Marketplace Template v2</Heading>
+              <Heading size="md">Marketplace UndeadBlocks</Heading>
             </CardHeader>
 
             <CardBody>

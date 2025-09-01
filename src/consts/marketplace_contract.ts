@@ -1,5 +1,5 @@
 import type { Chain } from "thirdweb";
-import { avalancheFuji, polygonAmoy, sepolia } from "./chains";
+import { avalancheFuji, polygonAmoy, sepolia, hederaMainnet  } from "./chains";
 
 type MarketplaceContract = {
   address: string;
@@ -22,5 +22,9 @@ export const MARKETPLACE_CONTRACTS: MarketplaceContract[] = [
   {
     address: "0xe0eFD6fb388405b67b3E9FaFc02649c70E749f03",
     chain: sepolia,
+  },
+   {
+    address: "0xTU_CONTRATO_DEPLOY_EN_HEDERA", // 👈 deploy real 
+    chain: hederaMainnet,
   },
 ];
