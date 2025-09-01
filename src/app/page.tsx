@@ -77,16 +77,16 @@ export default function Home() {
 // Delete this in your own app
 const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
   {
-    title: "Latest software",
+    title: "Weapons",
     bullet_points: [
       "Shipped with the latest thirdweb SDK (v5) and Next.js 14 (App router)",
     ],
   },
   {
-    title: "Multi-chain",
+    title: "Last News",
     bullet_points: [
-      "Seamlessly trade and browse items on multiple chains",
-      "You'd have to deploy a thirdweb Marketplace V3 contract on each of the chains you want to support",
+      "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+      "Support for Hedera Mainnet",
     ],
   },
   {
@@ -96,18 +96,18 @@ const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
     ],
   },
   {
-    title: "Upcoming features",
+    title: "Upcoming features in game and marketplace",
     bullet_points: [
-      "Select different currencies (ERC20) when creating listings",
-      "UI for English Auctions",
+      "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+      "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
     ],
   },
   {
     title: "Contribute",
     bullet_points: [
       "We welcome all contributions from the community.",
-      "Found a bug or have some suggestions? Create a GitHub issue!",
-      "Repo: https://github.com/thirdweb-example/marketplace-template",
+      "Found a bug or have some suggestions? Send email to ",
+      "support@undeadblocks.com",
     ],
   },
 ];
