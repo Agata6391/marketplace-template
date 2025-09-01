@@ -46,7 +46,7 @@ export function Navbar() {
             fontWeight="extrabold"
           >
             {/* Replace this with your own branding */}
-            THIRDMART
+            UndeadBlocks
           </Heading>
         </Box>
         <Box display={{ lg: "block", base: "none" }}>
