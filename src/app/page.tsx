@@ -14,13 +14,14 @@ import {
   StackDivider,
   Text,
 } from "@chakra-ui/react";
+import BuySellPage from "@/components/buySell-page/buysellpage";
 
-export default function Home() {
+export default function Page() {
   return (
     <Flex>
       <Box mt="24px" m="auto">
         <Flex direction="column" gap="4">
-          {/* Delete this <Card /> in your own app */}
+          {/* Demo card (borralo en tu app si querés) */}
           <Card border="1px" maxW="90vw" mx="auto">
             <CardHeader>
               <Heading size="md">Marketplace UndeadBlocks</Heading>
@@ -43,9 +44,15 @@ export default function Home() {
               </Stack>
             </CardBody>
           </Card>
+
+          {/* Sección coleccion+ Buy/Sell */}
           <Heading ml="20px" mt="40px">
             Trending collections
           </Heading>
+
+          {/* Panel de compra/venta  */}
+          <BuySellPage />
+
           <Flex
             direction="row"
             wrap="wrap"
@@ -58,11 +65,18 @@ export default function Home() {
                 _hover={{ textDecoration: "none" }}
                 w={300}
                 h={400}
-                key={item.address}
+                key={`${item.chain.id}-${item.address}`}
                 href={`/collection/${item.chain.id.toString()}/${item.address}`}
               >
-                <Image src={item.thumbnailUrl} />
-                <Text fontSize="large" mt="10px">
+                <Image
+                  src={item.thumbnailUrl}
+                  alt={item.title}
+                  w="300px"
+                  h="300px"
+                  objectFit="cover"
+                  borderRadius="md"
+                />
+                <Text fontSize="lg" mt="10px">
                   {item.title}
                 </Text>
               </Link>
@@ -74,7 +88,7 @@ export default function Home() {
   );
 }
 
-// Delete this in your own app
+
 const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
   {
     title: "Weapons",
@@ -106,8 +120,7 @@ const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
     title: "Contribute",
     bullet_points: [
       "We welcome all contributions from the community.",
-      "Found a bug or have some suggestions? Send email to ",
-      "support@undeadblocks.com",
+      "Found a bug or have some suggestions? Send an email to support@undeadblocks.com",
     ],
   },
 ];
