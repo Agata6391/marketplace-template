@@ -51,7 +51,7 @@ export default function Page() {
           </Heading>
 
           {/* Panel de compra/venta  */}
-          <BuySellPage />
+          <BuySellPage/>
 
           <Flex
             direction="row"
