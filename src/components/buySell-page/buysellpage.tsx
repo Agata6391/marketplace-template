@@ -1,173 +1,229 @@
+// src/components/buySell-page/buysellpage.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { BrowserProvider, Contract, Signer } from "ethers";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Card, CardHeader, CardBody, Heading, Text, Flex, Box, Image,
+  Card,
+  CardHeader,
+  CardBody,
+  Heading,
+  Text,
+  Flex,
+  Box,
+  Image,
+  Tooltip,
 } from "@chakra-ui/react";
+import { client } from "@/consts/client";
+import type { Chain } from "thirdweb";
+import {
+  useActiveAccount,
+  useActiveWalletChain,
+  useSwitchActiveWalletChain,
+  useReadContract,
+} from "thirdweb/react";
+import {
+  getContract,
+  getNFT,
+  prepareContractCall,
+  sendAndConfirmTransaction,
+} from "thirdweb";
+import { getOwnedTokenIds } from "thirdweb/extensions/erc721";
+import { hederaMainnet } from "@/consts/chains";
+import { isApprovedForAll } from "thirdweb/extensions/erc721";
+import { TransactionButton } from "thirdweb/react";
 
-// =================== CONFIG ===================
-const NFT_CONTRACT_ADDRESS = "0xREPLACE_WITH_YOUR_CONTRACT"; // <-- your ERC-721 on the active network
-const NFT_CONTRACT_ABI = [
-  "function balanceOf(address owner) view returns (uint256)",
-  "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)", // requires ERC721Enumerable
-  "function tokenURI(uint256 tokenId) view returns (string)",
-  "function safeTransferFrom(address from, address to, uint256 tokenId)",
-];
+type Props = {
+  address?: string; // may be invalid/empty -> demo mode
+  chain?: Chain; // may be undefined -> fallback to hederaMainnet
+};
 
 type NftItem = { id: string; title: string; image: string };
 
-// Simple IPFS -> HTTP gateway transform
-function ipfsToHttp(uri: string) {
+function ipfsToHttp(uri?: string) {
   if (!uri) return "";
-  if (uri.startsWith("ipfs://")) {
-    return `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`;
-  }
-  return uri;
+  return uri.startsWith("ipfs://")
+    ? `https://ipfs.io/ipfs/${uri.slice(7)}`
+    : uri;
 }
 
-async function fetchMetadata(tokenURI: string) {
-  try {
-    const res = await fetch(ipfsToHttp(tokenURI));
-    if (!res.ok) throw new Error("Metadata fetch failed");
-    const json = await res.json();
-    const img = ipfsToHttp(json.image || json.image_url || "");
-    const name = json.name || "";
-    return { image: img || "/images/default-nft.png", title: name || "" };
-  } catch {
-    return { image: "/images/default-nft.png", title: "" };
-  }
+function isValidAddress(addr?: string) {
+  return !!addr && /^0x[a-fA-F0-9]{40}$/.test(addr);
 }
 
-export default function BuySellPage() {
-  const [walletNFTs, setWalletNFTs] = useState<NftItem[]>([]);
+const DEMO_ITEMS: NftItem[] = [
+  { id: "1", title: "Demo Sword #1", image: "/images/default-nft.png" },
+  { id: "2", title: "Demo Shield #2", image: "/images/default-nft.png" },
+  { id: "3", title: "Demo Helmet #3", image: "/images/default-nft.png" },
+];
+// ✅ MarketplaceV3 contract address (replace with your real one when ready)
+const MARKETPLACE_ADDRESS = "0x000000000000000000000000000000000000dEaD"; // valid dummy for now
+
+export default function BuySellPage({ address, chain }: Props) {
+  const account = useActiveAccount();
+  const activeChain = useActiveWalletChain();
+  const switchChain = useSwitchActiveWalletChain();
+
+  // ✅ Always have a valid Chain (fallback to Hedera Mainnet)
+  const effectiveChain: Chain = chain ?? hederaMainnet;
+
+  const isDemo = !isValidAddress(address);
+
+  // Only build a real contract if we have a valid address
+  const realContract = useMemo(
+    () =>
+      isDemo
+        ? null
+        : getContract({ client, chain: effectiveChain, address: address! }),
+    [isDemo, effectiveChain, address]
+  );
+  
+
+  // Always provide a non-null contract to the hook (dummy + enabled: false)
+  const dummyContract = useMemo(
+    () =>
+      getContract({
+        client,
+        chain: effectiveChain,
+        address: "0x0000000000000000000000000000000000000001",
+      }),
+    [effectiveChain]
+  );
+
+  const {
+    data: ownedIds,
+    isLoading,
+    error,
+  } = useReadContract(getOwnedTokenIds, {
+    contract: isDemo ? dummyContract : (realContract as any),
+    owner: account?.address,
+    queryOptions: { enabled: !isDemo && !!realContract && !!account?.address },
+  });
+  const {
+  data: isApproved,
+  refetch: refetchApproval,
+  isLoading: isLoadingApproval,
+} = useReadContract(isApprovedForAll, {
+  contract: (isDemo ? dummyContract : (realContract as any)),
+  owner: account?.address,
+  operator: MARKETPLACE_ADDRESS,
+  queryOptions: {
+    enabled:
+      !isDemo &&
+      !!realContract &&
+      !!account?.address &&
+      /^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS),
+  },
+});
+
+  const [items, setItems] = useState<NftItem[]>([]);
   const [selectedNFT, setSelectedNFT] = useState<NftItem | null>(null);
   const [status, setStatus] = useState("");
-  const [account, setAccount] = useState("");
-  const [provider, setProvider] = useState<BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<Signer | null>(null);
 
-  const connectWallet = async () => {
-    const eth = (window as any).ethereum;
-    if (!eth) {
-      setStatus("MetaMask is not installed.");
+  useEffect(() => {
+    let ignore = false;
+    async function load() {
+      if (isDemo) {
+        setItems(DEMO_ITEMS);
+        setStatus("Demo mode: using mock NFTs (no blockchain).");
+        return;
+      }
+      if (!ownedIds || !ownedIds.length || !realContract) {
+        setItems([]);
+        return;
+      }
+      const details = await Promise.all(
+        ownedIds.map(async (id) => {
+          const nft = await getNFT({ contract: realContract, tokenId: id });
+          const title = nft.metadata?.name || `NFT #${id}`;
+          const image =
+            ipfsToHttp(nft.metadata?.image || nft.metadata?.image_url) ||
+            "/images/default-nft.png";
+          return { id: id.toString(), title, image };
+        })
+      );
+      if (!ignore) setItems(details);
+    }
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, [isDemo, ownedIds, realContract]);
+
+  async function ensureChain() {
+    if (isDemo) return;
+    try {
+      if (activeChain?.id !== effectiveChain.id) {
+        await switchChain(effectiveChain);
+      }
+    } catch (e: any) {
+      setStatus(`Chain switch failed: ${e?.message || e}`);
+    }
+  }
+
+  async function handleSend() {
+    if (isDemo) {
+      setStatus("Demo mode: sending is disabled.");
       return;
     }
+    if (!account || !selectedNFT || !realContract) return;
     try {
-      const _provider = new BrowserProvider(eth);
-      await _provider.send("eth_requestAccounts", []);
-      const _signer = await _provider.getSigner();
-      const address = await _signer.getAddress();
-
-      setProvider(_provider);
-      setSigner(_signer);
-      setAccount(address);
-      setStatus("Connected.");
-      await loadOwnedNFTs(_provider, address);
-    } catch (e: any) {
-      setStatus(`Failed to connect: ${e?.message || e}`);
-    }
-  };
-
-  const loadOwnedNFTs = async (_provider: BrowserProvider, owner: string) => {
-    setStatus("Loading NFTs...");
-    setWalletNFTs([]);
-    try {
-      const contract = new Contract(NFT_CONTRACT_ADDRESS, NFT_CONTRACT_ABI, _provider);
-      const balance: bigint = await contract.balanceOf(owner);
-      const total = Number(balance);
-
-      const items: NftItem[] = [];
-      for (let i = 0; i < total; i++) {
-        let tokenIdBig: bigint;
-        try {
-          // Requires ERC721Enumerable
-          tokenIdBig = await contract.tokenOfOwnerByIndex(owner, i);
-        } catch {
-          setStatus(
-            "This contract does not implement ERC721Enumerable (tokenOfOwnerByIndex). We need another strategy to list owned NFTs."
-          );
-          break;
-        }
-
-        const tokenId = tokenIdBig.toString();
-        let tokenURI = "";
-        try {
-          tokenURI = await contract.tokenURI(tokenIdBig);
-        } catch {
-          // Some contracts are strict with param types; bigint is fine.
-        }
-
-        const meta = tokenURI
-          ? await fetchMetadata(tokenURI)
-          : { image: "/images/default-nft.png", title: "" };
-
-        items.push({
-          id: tokenId,
-          title: meta.title || `NFT #${tokenId}`,
-          image: meta.image,
-        });
-      }
-      setWalletNFTs(items);
-      setStatus(items.length ? "NFTs loaded." : "No NFTs found in this wallet.");
-    } catch (e: any) {
-      setStatus(`Error loading NFTs: ${e?.message || e}`);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!selectedNFT || !signer || !account) return;
-    try {
+      await ensureChain();
       const to = prompt("Destination address:");
       if (!to) return;
 
       setStatus(`Sending ${selectedNFT.title || `#${selectedNFT.id}`}...`);
-      const contract = new Contract(NFT_CONTRACT_ADDRESS, NFT_CONTRACT_ABI, signer);
-      const tx = await contract.safeTransferFrom(account, to, BigInt(selectedNFT.id));
-      await tx.wait();
+
+      const tx = prepareContractCall({
+        contract: realContract,
+        method: "safeTransferFrom",
+        params: [account.address, to, BigInt(selectedNFT.id)],
+      });
+
+      await sendAndConfirmTransaction({ account, transaction: tx });
       setStatus("NFT sent.");
-      if (provider) await loadOwnedNFTs(provider, account);
+      setSelectedNFT(null);
     } catch (e: any) {
       setStatus(`Send failed: ${e?.message || e}`);
     }
-  };
-
-  const handleReceive = () => {
-    setStatus(`Your address to receive: ${account || "(connect wallet first)"}`);
-  };
-
-  useEffect(() => {
-    setWalletNFTs([]);
-  }, []);
+  }
 
   return (
     <Card border="1px" maxW="90vw" mx="auto" mt="40px">
       <CardHeader>
-        <Heading size="md">Buy & Sell your NFTs</Heading>
+        <Heading size="md">
+          Buy & Sell — {effectiveChain.name}
+          {isDemo && (
+            <Text as="span" color="orange.500">
+              {" "}
+              (Demo)
+            </Text>
+          )}
+        </Heading>
+        <Text fontSize="xs" color="gray.500">
+          {address || "No contract address (demo mode)"}
+        </Text>
       </CardHeader>
       <CardBody>
         <Box mb="4">
-          <Text>Your wallet NFTs:</Text>
-          {!account ? (
-            <Box
-              as="button"
-              px="4"
-              py="2"
-              bg="blue.400"
-              color="white"
-              rounded="md"
-              mt="2"
-              onClick={connectWallet}
-            >
-              Connect Wallet
-            </Box>
+          <Text>Your wallet NFTs for this collection:</Text>
+          {!account?.address ? (
+            <Text fontSize="sm" mt="2">
+              Connect a wallet using the header button.
+            </Text>
           ) : (
-            <Text fontSize="sm" mt="2">Connected: {account}</Text>
+            <Text fontSize="sm" mt="2">
+              Connected: {account.address}
+            </Text>
           )}
         </Box>
 
+        {!isDemo && isLoading && <Text>Loading NFTs...</Text>}
+        {!isDemo && error && (
+          <Text color="red.500">Error: {String(error)}</Text>
+        )}
+
         <Flex gap="4" wrap="wrap">
-          {walletNFTs.map((nft) => (
+          {items.map((nft) => (
             <Box
               key={nft.id}
               border="1px"
@@ -177,28 +233,79 @@ export default function BuySellPage() {
               bg={selectedNFT?.id === nft.id ? "blue.50" : "white"}
               onClick={() => setSelectedNFT(nft)}
             >
-              <Image src={nft.image} alt={nft.title} boxSize="96px" objectFit="cover" />
-              <Text mt="2" noOfLines={1}>{nft.title}</Text>
+              <Image
+                src={nft.image}
+                alt={nft.title}
+                boxSize="96px"
+                objectFit="cover"
+              />
+              <Text mt="2" noOfLines={1}>
+                {nft.title}
+              </Text>
             </Box>
           ))}
         </Flex>
 
-        {selectedNFT && (
-          <Box mt="6">
-            <Text>Action:</Text>
-            <Flex gap="4" mt="2">
-              <Box as="button" px="4" py="2" bg="green.400" color="white" rounded="md" onClick={handleReceive}>
-                Receive
-              </Box>
-              <Box as="button" px="4" py="2" bg="red.400" color="white" rounded="md" onClick={handleSend}>
-                Send
-              </Box>
-            </Flex>
-            {status && <Text mt="4">{status}</Text>}
-          </Box>
-        )}
+       {selectedNFT && (
+  <Box mt="6">
+    <Text>Action:</Text>
 
-        {!selectedNFT && status && <Text mt="4">{status}</Text>}
+    {/* --- APPROVAL SECTION --- */}
+    {!isDemo && (
+      <Box mt="2">
+        {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
+          <Text color="orange.500" fontSize="sm">
+            Marketplace address not configured (approval disabled).
+          </Text>
+        ) : isLoadingApproval ? (
+          <Text fontSize="sm">Checking approval…</Text>
+        ) : isApproved ? (
+          <Text fontSize="sm" color="green.500">
+            Marketplace already approved for this collection.
+          </Text>
+        ) : (
+          <TransactionButton
+            transaction={async () => {
+              await ensureChain(); // make sure wallet is on the right chain
+              return prepareContractCall({
+                contract: realContract!, // safe because not demo & realContract exists
+                method: "setApprovalForAll",
+                params: [MARKETPLACE_ADDRESS, true],
+              });
+            }}
+            onTransactionConfirmed={() => {
+              refetchApproval();
+            }}
+            style={{ marginTop: 8 }}
+          >
+            Approve Marketplace
+          </TransactionButton>
+        )}
+      </Box>
+    )}
+
+    {/* --- SEND SECTION (demo-safe) --- */}
+    <Flex gap="4" mt="4">
+      <Tooltip label={isDemo ? "Demo mode: sending disabled" : ""}>
+        <Box
+          as="button"
+          px="4"
+          py="2"
+          bg={isDemo ? "gray.400" : "red.400"}
+          _hover={{ bg: isDemo ? "gray.400" : "red.500" }}
+          cursor={isDemo ? "not-allowed" : "pointer"}
+          color="white"
+          rounded="md"
+          onClick={handleSend}
+        >
+          Send
+        </Box>
+      </Tooltip>
+    </Flex>
+  </Box>
+)}
+
+        {status && <Text mt="4">{status}</Text>}
       </CardBody>
     </Card>
   );
