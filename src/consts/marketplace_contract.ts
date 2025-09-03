@@ -6,6 +6,7 @@ type MarketplaceContract = {
   chain: Chain;
 };
 
+
 /**
  * You need a marketplace contract on each of the chain you want to support
  * Only list one marketplace contract address for each chain

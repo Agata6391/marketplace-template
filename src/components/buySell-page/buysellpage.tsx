@@ -20,6 +20,7 @@ import {
   useActiveWalletChain,
   useSwitchActiveWalletChain,
   useReadContract,
+  TransactionButton,
 } from "thirdweb/react";
 import {
   getContract,
@@ -27,14 +28,15 @@ import {
   prepareContractCall,
   sendAndConfirmTransaction,
 } from "thirdweb";
-import { getOwnedTokenIds } from "thirdweb/extensions/erc721";
+import { getOwnedTokenIds, isApprovedForAll } from "thirdweb/extensions/erc721";
 import { hederaMainnet } from "@/consts/chains";
-import { isApprovedForAll } from "thirdweb/extensions/erc721";
-import { TransactionButton } from "thirdweb/react";
+
+// Optional: local listing button (keeps neutral wording)
+import CreateListingLocal from "@/components/buySell-page/CreateListingLocal";
 
 type Props = {
-  address?: string; // may be invalid/empty -> demo mode
-  chain?: Chain; // may be undefined -> fallback to hederaMainnet
+  address?: string; // may be empty/invalid; component will fall back to a neutral view
+  chain?: Chain;    // may be undefined -> fallback to hederaMainnet
 };
 
 type NftItem = { id: string; title: string; image: string };
@@ -50,33 +52,35 @@ function isValidAddress(addr?: string) {
   return !!addr && /^0x[a-fA-F0-9]{40}$/.test(addr);
 }
 
-const DEMO_ITEMS: NftItem[] = [
-  { id: "1", title: "Demo Sword #1", image: "/images/default-nft.png" },
-  { id: "2", title: "Demo Shield #2", image: "/images/default-nft.png" },
-  { id: "3", title: "Demo Helmet #3", image: "/images/default-nft.png" },
+// Neutral local items used when no contract address is configured or invalid
+const DEFAULT_ITEMS: NftItem[] = [
+  { id: "1", title: "Sword #1", image: "/images/default-nft.png" },
+  { id: "2", title: "Shield #2", image: "/images/default-nft.png" },
+  { id: "3", title: "Helmet #3", image: "/images/default-nft.png" },
 ];
-// ✅ MarketplaceV3 contract address (replace with your real one when ready)
-const MARKETPLACE_ADDRESS = "0x000000000000000000000000000000000000dEaD"; // valid dummy for now
+
+// MarketplaceV3 address (replace with a real one when ready)
+const MARKETPLACE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 export default function BuySellPage({ address, chain }: Props) {
   const account = useActiveAccount();
   const activeChain = useActiveWalletChain();
   const switchChain = useSwitchActiveWalletChain();
 
-  // ✅ Always have a valid Chain (fallback to Hedera Mainnet)
+  // Always have a valid Chain (fallback to Hedera Mainnet)
   const effectiveChain: Chain = chain ?? hederaMainnet;
 
-  const isDemo = !isValidAddress(address);
+  // Neutral flag for fallback behavior (no address or invalid address)
+  const useLocalFallback = !isValidAddress(address);
 
   // Only build a real contract if we have a valid address
   const realContract = useMemo(
     () =>
-      isDemo
+      useLocalFallback
         ? null
         : getContract({ client, chain: effectiveChain, address: address! }),
-    [isDemo, effectiveChain, address]
+    [useLocalFallback, effectiveChain, address]
   );
-  
 
   // Always provide a non-null contract to the hook (dummy + enabled: false)
   const dummyContract = useMemo(
@@ -94,26 +98,28 @@ export default function BuySellPage({ address, chain }: Props) {
     isLoading,
     error,
   } = useReadContract(getOwnedTokenIds, {
-    contract: isDemo ? dummyContract : (realContract as any),
+    contract: useLocalFallback ? dummyContract : (realContract as any),
     owner: account?.address,
-    queryOptions: { enabled: !isDemo && !!realContract && !!account?.address },
+    queryOptions: { enabled: !useLocalFallback && !!realContract && !!account?.address },
   });
+
+  // Approval state (only meaningful when working with a real contract)
   const {
-  data: isApproved,
-  refetch: refetchApproval,
-  isLoading: isLoadingApproval,
-} = useReadContract(isApprovedForAll, {
-  contract: (isDemo ? dummyContract : (realContract as any)),
-  owner: account?.address,
-  operator: MARKETPLACE_ADDRESS,
-  queryOptions: {
-    enabled:
-      !isDemo &&
-      !!realContract &&
-      !!account?.address &&
-      /^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS),
-  },
-});
+    data: isApproved,
+    refetch: refetchApproval,
+    isLoading: isLoadingApproval,
+  } = useReadContract(isApprovedForAll, {
+    contract: (useLocalFallback ? dummyContract : (realContract as any)),
+    owner: account?.address,
+    operator: MARKETPLACE_ADDRESS,
+    queryOptions: {
+      enabled:
+        !useLocalFallback &&
+        !!realContract &&
+        !!account?.address &&
+        /^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS),
+    },
+  });
 
   const [items, setItems] = useState<NftItem[]>([]);
   const [selectedNFT, setSelectedNFT] = useState<NftItem | null>(null);
@@ -122,9 +128,9 @@ export default function BuySellPage({ address, chain }: Props) {
   useEffect(() => {
     let ignore = false;
     async function load() {
-      if (isDemo) {
-        setItems(DEMO_ITEMS);
-        setStatus("Demo mode: using mock NFTs (no blockchain).");
+      if (useLocalFallback) {
+        setItems(DEFAULT_ITEMS);
+        setStatus("");
         return;
       }
       if (!ownedIds || !ownedIds.length || !realContract) {
@@ -147,22 +153,22 @@ export default function BuySellPage({ address, chain }: Props) {
     return () => {
       ignore = true;
     };
-  }, [isDemo, ownedIds, realContract]);
+  }, [useLocalFallback, ownedIds, realContract]);
 
   async function ensureChain() {
-    if (isDemo) return;
+    if (useLocalFallback) return;
     try {
       if (activeChain?.id !== effectiveChain.id) {
         await switchChain(effectiveChain);
       }
     } catch (e: any) {
-      setStatus(`Chain switch failed: ${e?.message || e}`);
+      setStatus(`Network switch failed: ${e?.message || e}`);
     }
   }
 
   async function handleSend() {
-    if (isDemo) {
-      setStatus("Demo mode: sending is disabled.");
+    if (useLocalFallback) {
+      setStatus("Sending is not available in this view.");
       return;
     }
     if (!account || !selectedNFT || !realContract) return;
@@ -190,17 +196,9 @@ export default function BuySellPage({ address, chain }: Props) {
   return (
     <Card border="1px" maxW="90vw" mx="auto" mt="40px">
       <CardHeader>
-        <Heading size="md">
-          Buy & Sell — {effectiveChain.name}
-          {isDemo && (
-            <Text as="span" color="orange.500">
-              {" "}
-              (Demo)
-            </Text>
-          )}
-        </Heading>
+        <Heading size="md">Buy & Sell — {effectiveChain.name}</Heading>
         <Text fontSize="xs" color="gray.500">
-          {address || "No contract address (demo mode)"}
+          {address || "No contract address configured"}
         </Text>
       </CardHeader>
       <CardBody>
@@ -217,8 +215,8 @@ export default function BuySellPage({ address, chain }: Props) {
           )}
         </Box>
 
-        {!isDemo && isLoading && <Text>Loading NFTs...</Text>}
-        {!isDemo && error && (
+        {!useLocalFallback && isLoading && <Text>Loading NFTs...</Text>}
+        {!useLocalFallback && error && (
           <Text color="red.500">Error: {String(error)}</Text>
         )}
 
@@ -246,64 +244,79 @@ export default function BuySellPage({ address, chain }: Props) {
           ))}
         </Flex>
 
-       {selectedNFT && (
-  <Box mt="6">
-    <Text>Action:</Text>
+        {selectedNFT && (
+          <Box mt="6">
+            <Text>Action:</Text>
 
-    {/* --- APPROVAL SECTION --- */}
-    {!isDemo && (
-      <Box mt="2">
-        {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
-          <Text color="orange.500" fontSize="sm">
-            Marketplace address not configured (approval disabled).
-          </Text>
-        ) : isLoadingApproval ? (
-          <Text fontSize="sm">Checking approval…</Text>
-        ) : isApproved ? (
-          <Text fontSize="sm" color="green.500">
-            Marketplace already approved for this collection.
-          </Text>
-        ) : (
-          <TransactionButton
-            transaction={async () => {
-              await ensureChain(); // make sure wallet is on the right chain
-              return prepareContractCall({
-                contract: realContract!, // safe because not demo & realContract exists
-                method: "setApprovalForAll",
-                params: [MARKETPLACE_ADDRESS, true],
-              });
-            }}
-            onTransactionConfirmed={() => {
-              refetchApproval();
-            }}
-            style={{ marginTop: 8 }}
-          >
-            Approve Marketplace
-          </TransactionButton>
+            {/* Approval (only when working with a real contract) */}
+            {!useLocalFallback && (
+              <Box mt="2">
+                {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
+                  <Text color="orange.500" fontSize="sm">
+                    Marketplace address not configured.
+                  </Text>
+                ) : isLoadingApproval ? (
+                  <Text fontSize="sm">Checking approval…</Text>
+                ) : isApproved ? (
+                  <Text fontSize="sm" color="green.500">
+                    Marketplace approved for this collection.
+                  </Text>
+                ) : (
+                  <TransactionButton
+                    transaction={async () => {
+                      await ensureChain(); // ensure correct network
+                      return prepareContractCall({
+                        contract: realContract!, // safe because not in fallback & exists
+                        method: "setApprovalForAll",
+                        params: [MARKETPLACE_ADDRESS, true],
+                      });
+                    }}
+                    onTransactionConfirmed={() => {
+                      refetchApproval();
+                    }}
+                    style={{ marginTop: 8 }}
+                  >
+                    Approve Marketplace
+                  </TransactionButton>
+                )}
+              </Box>
+            )}
+
+            {/* Send (disabled in fallback) */}
+            <Flex gap="4" mt="4">
+              <Tooltip label={useLocalFallback ? "" : undefined}>
+                <Box
+                  as="button"
+                  px="4"
+                  py="2"
+                  bg={useLocalFallback ? "gray.400" : "red.400"}
+                  _hover={{ bg: useLocalFallback ? "gray.400" : "red.500" }}
+                  cursor={useLocalFallback ? "not-allowed" : "pointer"}
+                  color="white"
+                  rounded="md"
+                  onClick={handleSend}
+                >
+                  Send
+                </Box>
+              </Tooltip>
+            </Flex>
+
+            {/* Optional: local listing creation (neutral wording) */}
+            {account?.address && (
+              <Box mt="4">
+                <Text mb="2" fontWeight="semibold">Create listing</Text>
+                <CreateListingLocal
+                  seller={account.address}
+                  collection={address || "0x000000000000000000000000000000000000dEaD"}
+                  tokenId={selectedNFT.id}
+                  name={selectedNFT.title}
+                  image={selectedNFT.image}
+                  onListed={() => setStatus("Listing created.")}
+                />
+              </Box>
+            )}
+          </Box>
         )}
-      </Box>
-    )}
-
-    {/* --- SEND SECTION (demo-safe) --- */}
-    <Flex gap="4" mt="4">
-      <Tooltip label={isDemo ? "Demo mode: sending disabled" : ""}>
-        <Box
-          as="button"
-          px="4"
-          py="2"
-          bg={isDemo ? "gray.400" : "red.400"}
-          _hover={{ bg: isDemo ? "gray.400" : "red.500" }}
-          cursor={isDemo ? "not-allowed" : "pointer"}
-          color="white"
-          rounded="md"
-          onClick={handleSend}
-        >
-          Send
-        </Box>
-      </Tooltip>
-    </Flex>
-  </Box>
-)}
 
         {status && <Text mt="4">{status}</Text>}
       </CardBody>

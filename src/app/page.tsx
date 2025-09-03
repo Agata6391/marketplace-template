@@ -1,6 +1,5 @@
 "use client";
 
-import { NFT_CONTRACTS } from "@/consts/nft_contracts";
 import { Link } from "@chakra-ui/next-js";
 import {
   Box,
@@ -15,79 +14,94 @@ import {
   Text,
 } from "@chakra-ui/react";
 import BuySellPage from "@/components/buySell-page/buysellpage";
-
+import { NFT_CONTRACTS } from "@/consts/nft_contracts";
+import { hederaMainnet } from "@/consts/chains";
+import MarketBoard from "@/components/buySell-page/MarketBoard";
 export default function Page() {
   return (
-    <Flex>
-      <Box mt="24px" m="auto">
-        <Flex direction="column" gap="4">
-          {/* Demo card (borralo en tu app si querés) */}
-          <Card border="1px" maxW="90vw" mx="auto">
-            <CardHeader>
-              <Heading size="md">Marketplace UndeadBlocks</Heading>
-            </CardHeader>
+    <>
+      {/* Bloque 1 */}
+      <Flex>
+        <Box mt="24px" m="auto">
+          <Flex direction="column" gap="4">
+            {/* Intro card */}
+            <Card border="1px" maxW="90vw" mx="auto">
+              <CardHeader>
+                <Heading size="md">Marketplace UndeadBlocks</Heading>
+              </CardHeader>
+              <CardBody>
+                <Stack divider={<StackDivider />} spacing="4">
+                  {_latestUpdates.map((item) => (
+                    <Box key={item.title}>
+                      <Heading size="xs" textTransform="uppercase">
+                        {item.title}
+                      </Heading>
+                      {item.bullet_points.map((pt) => (
+                        <Text pt="2" fontSize="sm" key={pt}>
+                          {pt}
+                        </Text>
+                      ))}
+                    </Box>
+                  ))} 
+                </Stack>
+              </CardBody>
+            </Card>
 
-            <CardBody>
-              <Stack divider={<StackDivider />} spacing="4">
-                {_latestUpdates.map((item) => (
-                  <Box key={item.title}>
-                    <Heading size="xs" textTransform="uppercase">
-                      {item.title}
-                    </Heading>
-                    {item.bullet_points.map((pt) => (
-                      <Text pt="2" fontSize="sm" key={pt}>
-                        {pt}
-                      </Text>
-                    ))}
-                  </Box>
-                ))}
-              </Stack>
-            </CardBody>
-          </Card>
+            {/* Buy/Sell panel
+            <Heading ml="20px" mt="40px">
+              Trending collections
+            </Heading>
+            <BuySellPage address="" chain={hederaMainnet} /> */}
 
-          {/* Sección coleccion+ Buy/Sell */}
-          <Heading ml="20px" mt="40px">
-            Trending collections
-          </Heading>
-
-          {/* Panel de compra/venta  */}
-          <BuySellPage/>
-
-          <Flex
-            direction="row"
-            wrap="wrap"
-            mt="20px"
-            gap="5"
-            justifyContent="space-evenly"
-          >
-            {NFT_CONTRACTS.map((item) => (
-              <Link
-                _hover={{ textDecoration: "none" }}
-                w={300}
-                h={400}
-                key={`${item.chain.id}-${item.address}`}
-                href={`/collection/${item.chain.id.toString()}/${item.address}`}
-              >
-                <Image
-                  src={item.thumbnailUrl}
-                  alt={item.title}
-                  w="300px"
-                  h="300px"
-                  objectFit="cover"
-                  borderRadius="md"
-                />
-                <Text fontSize="lg" mt="10px">
-                  {item.title}
-                </Text>
-              </Link>
-            ))}
+            {/* Collections grid */}
+            <Flex
+              direction="row"
+              wrap="wrap"
+              mt="20px"
+              gap="5"
+              justifyContent="space-evenly"
+            >
+              {NFT_CONTRACTS.map((item) => (
+                <Link
+                  _hover={{ textDecoration: "none" }}
+                  w={300}
+                  h={400}
+                  key={`${item.chain.id}-${item.address}`}
+                  href={`/collection/${item.chain.id.toString()}/${item.address}`}
+                >
+                  <Image
+                    src={item.thumbnailUrl}
+                    alt={item.title}
+                    w="300px"
+                    h="300px"
+                    objectFit="cover"
+                    borderRadius="md"
+                  />
+                  <Text fontSize="lg" mt="10px">
+                    {item.title}
+                  </Text>
+                </Link>
+              ))}
+            </Flex>
           </Flex>
-        </Flex>
-      </Box>
-    </Flex>
+        </Box>
+      </Flex>
+
+      {/* Marketplace */}
+      <Flex direction="column" gap="8" mt="24px" mx="auto" maxW="1200px">
+        <Box>
+          <Heading size="lg" mb="4">My NFTs</Heading>
+          <BuySellPage address="" chain={hederaMainnet} />
+        </Box>
+
+        <Box>
+          <Heading size="lg" mb="4">Marketplace</Heading>
+          <MarketBoard />
+        </Box>
+      </Flex>
+    </>
   );
 }
-
 
 const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
   {
