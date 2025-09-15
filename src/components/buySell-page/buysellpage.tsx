@@ -33,6 +33,10 @@ import { hederaMainnet } from "@/consts/chains";
 
 // Optional: local listing button (keeps neutral wording)
 import CreateListingLocal from "@/components/buySell-page/CreateListingLocal";
+//optional module for auctions
+import CreateAuction from "@/components/auctions/CreateAuction";
+
+
 
 type Props = {
   address?: string; // may be empty/invalid; component will fall back to a neutral view
@@ -244,79 +248,95 @@ export default function BuySellPage({ address, chain }: Props) {
           ))}
         </Flex>
 
-        {selectedNFT && (
-          <Box mt="6">
-            <Text>Action:</Text>
+       {selectedNFT && (
+  <Box mt="6">
+    <Text>Action:</Text>
 
-            {/* Approval (only when working with a real contract) */}
-            {!useLocalFallback && (
-              <Box mt="2">
-                {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
-                  <Text color="orange.500" fontSize="sm">
-                    Marketplace address not configured.
-                  </Text>
-                ) : isLoadingApproval ? (
-                  <Text fontSize="sm">Checking approval…</Text>
-                ) : isApproved ? (
-                  <Text fontSize="sm" color="green.500">
-                    Marketplace approved for this collection.
-                  </Text>
-                ) : (
-                  <TransactionButton
-                    transaction={async () => {
-                      await ensureChain(); // ensure correct network
-                      return prepareContractCall({
-                        contract: realContract!, // safe because not in fallback & exists
-                        method: "setApprovalForAll",
-                        params: [MARKETPLACE_ADDRESS, true],
-                      });
-                    }}
-                    onTransactionConfirmed={() => {
-                      refetchApproval();
-                    }}
-                    style={{ marginTop: 8 }}
-                  >
-                    Approve Marketplace
-                  </TransactionButton>
-                )}
-              </Box>
-            )}
-
-            {/* Send (disabled in fallback) */}
-            <Flex gap="4" mt="4">
-              <Tooltip label={useLocalFallback ? "" : undefined}>
-                <Box
-                  as="button"
-                  px="4"
-                  py="2"
-                  bg={useLocalFallback ? "gray.400" : "red.400"}
-                  _hover={{ bg: useLocalFallback ? "gray.400" : "red.500" }}
-                  cursor={useLocalFallback ? "not-allowed" : "pointer"}
-                  color="white"
-                  rounded="md"
-                  onClick={handleSend}
-                >
-                  Send
-                </Box>
-              </Tooltip>
-            </Flex>
-
-            {/* Optional: local listing creation (neutral wording) */}
-            {account?.address && (
-              <Box mt="4">
-                <Text mb="2" fontWeight="semibold">Create listing</Text>
-                <CreateListingLocal
-                  seller={account.address}
-                  collection={address || "0x000000000000000000000000000000000000dEaD"}
-                  tokenId={selectedNFT.id}
-                  name={selectedNFT.title}
-                  image={selectedNFT.image}
-                  onListed={() => setStatus("Listing created.")}
-                />
-              </Box>
-            )}
-          </Box>
+    {/* Approval (only when working with a real contract) */}
+    {!useLocalFallback && (
+      <Box mt="2">
+        {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
+          <Text color="orange.500" fontSize="sm">
+            Marketplace address not configured.
+          </Text>
+        ) : isLoadingApproval ? (
+          <Text fontSize="sm">Checking approval…</Text>
+        ) : isApproved ? (
+          <Text fontSize="sm" color="green.500">
+            Marketplace approved for this collection.
+          </Text>
+        ) : (
+          <TransactionButton
+            transaction={async () => {
+              await ensureChain(); // ensure correct network
+              return prepareContractCall({
+                contract: realContract!, // safe because not in fallback & exists
+                method: "setApprovalForAll",
+                params: [MARKETPLACE_ADDRESS, true],
+              });
+            }}
+            onTransactionConfirmed={() => {
+              refetchApproval();
+            }}
+            style={{ marginTop: 8 }}
+          >
+            Approve Marketplace
+          </TransactionButton>
         )}
+      </Box>
+    )}
+
+    {/* Send (disabled in fallback) */}
+    <Flex gap="4" mt="4">
+      <Tooltip label={useLocalFallback ? "" : undefined}>
+        <Box
+          as="button"
+          px="4"
+          py="2"
+          bg={useLocalFallback ? "gray.400" : "red.400"}
+          _hover={{ bg: useLocalFallback ? "gray.400" : "red.500" }}
+          cursor={useLocalFallback ? "not-allowed" : "pointer"}
+          color="white"
+          rounded="md"
+          onClick={handleSend}
+        >
+          Send
+        </Box>
+      </Tooltip>
+    </Flex>
+
+    {/* Create listing (local) */}
+    {account?.address && (
+      <Box mt="4">
+        <Text mb="2" fontWeight="semibold">Create listing</Text>
+        <CreateListingLocal
+          seller={account.address}
+          collection={address || "0x000000000000000000000000000000000000dEaD"}
+          tokenId={selectedNFT.id}
+          name={selectedNFT.title}
+          image={selectedNFT.image}
+          onListed={() => setStatus("Listing created.")}
+        />
+      </Box>
+    )}
+
+    {/* Create auction (local)  ⬅️ AGREGA ESTE BLOQUE DEBAJO DEL LISTING */}
+    {account?.address && (
+      <Box mt="4">
+        <Text mb="2" fontWeight="semibold">Create auction</Text>
+        <CreateAuction
+          seller={account.address}
+          collection={address || "0x000000000000000000000000000000000000dEaD"}
+          tokenId={selectedNFT.id}
+          name={selectedNFT.title}
+          image={selectedNFT.image}
+          onCreated={() => setStatus("Auction created.")}
+        />
+      </Box>
+    )}
+  </Box>
+)}
+
 
         {status && <Text mt="4">{status}</Text>}
       </CardBody>
