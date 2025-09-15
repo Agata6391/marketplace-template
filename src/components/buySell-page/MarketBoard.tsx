@@ -34,8 +34,15 @@ export default function MarketBoard({ title = "Marketplace" }: Props) {
     };
   }, []);
 
-  const onBuy = (id: string) => marketStore.remove(id);
-  const onRemove = (id: string) => marketStore.remove(id);
+const onBuy = (id: string) => {
+  window.alert("Purchase completed.");
+};
+
+const onRemove = (id: string) => {
+  marketStore.remove(id);      // remove from...>
+  window.alert("Listing removed.");
+};
+
 
   return (
     <Card border="1px" maxW="1200px" mx="auto" mt="24px">

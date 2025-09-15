@@ -1,10 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Box, Card, CardBody, CardHeader, Flex, Heading, Image, Text, Button, Input } from "@chakra-ui/react";
-import { auctionStore, type AuctionItem, AUCTIONS_KEY, AUCTIONS_EVENT } from "@/utils/auctionStore";
+import {
+  Box,
+  Card,
+  CardBody,
+  CardHeader,
+  Flex,
+  Heading,
+  Image,
+  Text,
+  Button,
+  Input,
+} from "@chakra-ui/react";
+import {
+  auctionStore,
+  type AuctionItem,
+  AUCTIONS_KEY,
+  AUCTIONS_EVENT,
+} from "@/utils/auctionStore";
 import { useActiveAccount } from "thirdweb/react";
 
+const short = (addr?: string) =>
+  addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
 type Props = { title?: string };
 
 function formatRemaining(ms: number) {
@@ -49,8 +67,17 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
     };
   }, []);
 
-  const active = useMemo(() => auctions.filter(a => a.status === "OPEN").sort((a,b)=>a.endTime-b.endTime), [auctions]);
-  const closed = useMemo(() => auctions.filter(a => a.status === "CLOSED"), [auctions]);
+  const active = useMemo(
+    () =>
+      auctions
+        .filter((a) => a.status === "OPEN")
+        .sort((a, b) => a.endTime - b.endTime),
+    [auctions]
+  );
+  const closed = useMemo(
+    () => auctions.filter((a) => a.status === "CLOSED"),
+    [auctions]
+  );
 
   function placeBid(a: AuctionItem) {
     try {
@@ -75,11 +102,42 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
     const remaining = a.endTime - Date.now();
 
     return (
-      <Box key={a.id} border="1px" borderColor="border" bg="cardBg" w="280px" rounded="md" overflow="hidden" p="10px">
-        <Image src={a.image} alt={a.name} w="260px" h="260px" objectFit="cover" />
-        <Text mt="10px" color="text" noOfLines={1}>{a.name}</Text>
-        <Text fontSize="xs" color="muted">#{a.tokenId} • {a.collection.slice(0,6)}…{a.collection.slice(-4)}</Text>
-
+      <Box
+        key={a.id}
+        border="1px"
+        borderColor="border"
+        bg="cardBg"
+        w="280px"
+        rounded="md"
+        overflow="hidden"
+        p="10px"
+      >
+        <Image
+          src={a.image}
+          alt={a.name}
+          w="260px"
+          h="260px"
+          objectFit="cover"
+        />
+        <Text mt="10px" color="text" noOfLines={1}>
+          {a.name}
+        </Text>
+        <Text fontSize="xs" color="muted">
+          #{a.tokenId} • {a.collection.slice(0, 6)}…{a.collection.slice(-4)}
+        </Text>
+        {/* NUEVO */}
+        <Text fontSize="xs" color="muted" mt="2">
+          Seller: {short(a.seller)}
+        </Text>
+        {a.status === "OPEN" ? (
+          <Text fontSize="xs" color="muted">
+            Top bidder: {short(a.currentBidder)}
+          </Text>
+        ) : (
+          <Text fontSize="xs" color="muted">
+            Winner: {short(a.currentBidder)}
+          </Text>
+        )}
         {a.status === "OPEN" ? (
           <>
             <Text fontSize="sm" color="text" mt="6px">
@@ -88,27 +146,40 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
             <Text fontSize="sm" color="text">
               Top bid: {a.currentBid ? `${a.currentBid} ${a.currency}` : "—"}
             </Text>
-            <Text fontSize="sm" color="muted">Time left: {formatRemaining(remaining)}</Text>
+            <Text fontSize="sm" color="muted">
+              Time left: {formatRemaining(remaining)}
+            </Text>
 
             <Flex gap="2" mt="8px">
               <Input
                 value={bids[a.id] || ""}
-                onChange={(e) => setBids((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                onChange={(e) =>
+                  setBids((prev) => ({ ...prev, [a.id]: e.target.value }))
+                }
                 placeholder={`Amount (${a.currency})`}
                 size="sm"
               />
-              <Button size="sm" colorScheme="blue" onClick={() => placeBid(a)}>Bid</Button>
+              <Button size="sm" colorScheme="blue" onClick={() => placeBid(a)}>
+                Bid
+              </Button>
             </Flex>
 
             {account?.address?.toLowerCase() === a.seller.toLowerCase() && (
-              <Button size="sm" mt="8px" onClick={() => closeAuction(a)}>Close</Button>
+              <Button size="sm" mt="8px" onClick={() => closeAuction(a)}>
+                Close
+              </Button>
             )}
           </>
         ) : (
           <>
-            <Text fontSize="sm" color="muted" mt="6px">Status: Closed</Text>
+            <Text fontSize="sm" color="muted" mt="6px">
+              Status: Closed
+            </Text>
             <Text fontSize="sm" color="text">
-              Winner: {a.currentBidder ? `${a.currentBidder.slice(0,6)}…${a.currentBidder.slice(-4)}` : "—"}
+              Winner:{" "}
+              {a.currentBidder
+                ? `${a.currentBidder.slice(0, 6)}…${a.currentBidder.slice(-4)}`
+                : "—"}
             </Text>
             <Text fontSize="sm" color="text">
               Final: {a.currentBid ? `${a.currentBid} ${a.currency}` : "—"}
@@ -120,9 +191,18 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
   }
 
   return (
-    <Card border="1px" borderColor="border" bg="cardBg" maxW="1200px" mx="auto" mt="24px">
+    <Card
+      border="1px"
+      borderColor="border"
+      bg="cardBg"
+      maxW="1200px"
+      mx="auto"
+      mt="24px"
+    >
       <CardHeader>
-        <Heading size="md" color="text">{title}</Heading>
+        <Heading size="md" color="text">
+          {title}
+        </Heading>
       </CardHeader>
       <CardBody>
         {active.length === 0 && closed.length === 0 && (
@@ -131,15 +211,23 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
 
         {active.length > 0 && (
           <>
-            <Heading size="sm" mb="3" color="text">Active</Heading>
-            <Flex wrap="wrap" gap="5">{active.map(renderCard)}</Flex>
+            <Heading size="sm" mb="3" color="text">
+              Active
+            </Heading>
+            <Flex wrap="wrap" gap="5">
+              {active.map(renderCard)}
+            </Flex>
           </>
         )}
 
         {closed.length > 0 && (
           <>
-            <Heading size="sm" mt="8" mb="3" color="text">Closed</Heading>
-            <Flex wrap="wrap" gap="5">{closed.map(renderCard)}</Flex>
+            <Heading size="sm" mt="8" mb="3" color="text">
+              Closed
+            </Heading>
+            <Flex wrap="wrap" gap="5">
+              {closed.map(renderCard)}
+            </Flex>
           </>
         )}
       </CardBody>
