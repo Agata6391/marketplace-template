@@ -29,7 +29,7 @@ export default function Page() {
               <CardHeader>
                 <Heading size="md">Marketplace UndeadBlocks</Heading>
               </CardHeader>
-              <CardBody>
+              {/* <CardBody>
                 <Stack divider={<StackDivider />} spacing="4">
                   {_latestUpdates.map((item) => (
                     <Box key={item.title}>
@@ -44,7 +44,7 @@ export default function Page() {
                     </Box>
                   ))} 
                 </Stack>
-              </CardBody>
+              </CardBody> */}
             </Card>
 
             {/* Buy/Sell panel
@@ -103,38 +103,38 @@ export default function Page() {
   );
 }
 
-const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
-  {
-    title: "Weapons",
-    bullet_points: [
-      "Shipped with the latest thirdweb SDK (v5) and Next.js 14 (App router)",
-    ],
-  },
-  {
-    title: "Last News",
-    bullet_points: [
-      "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      "Support for Hedera Mainnet",
-    ],
-  },
-  {
-    title: "Multiple collections supported",
-    bullet_points: [
-      "The new template now supports multiple collections, you can view your owned NFTs and your listings",
-    ],
-  },
-  {
-    title: "Upcoming features in game and marketplace",
-    bullet_points: [
-      "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-    ],
-  },
-  {
-    title: "Contribute",
-    bullet_points: [
-      "We welcome all contributions from the community.",
-      "Found a bug or have some suggestions? Send an email to support@undeadblocks.com",
-    ],
-  },
-];
+// const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
+//   {
+//     title: "Weapons",
+//     bullet_points: [
+//       "Shipped with the latest thirdweb SDK (v5) and Next.js 14 (App router)",
+//     ],
+//   },
+//   {
+//     title: "Last News",
+//     bullet_points: [
+//       "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+//       "Support for Hedera Mainnet",
+//     ],
+//   },
+//   {
+//     title: "Multiple collections supported",
+//     bullet_points: [
+//       "The new template now supports multiple collections, you can view your owned NFTs and your listings",
+//     ],
+//   },
+//   {
+//     title: "Upcoming features in game and marketplace",
+//     bullet_points: [
+//       "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+//       "lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+//     ],
+//   },
+//   {
+//     title: "Contribute",
+//     bullet_points: [
+//       "We welcome all contributions from the community.",
+//       "Found a bug or have some suggestions? Send an email to support@undeadblocks.com",
+//     ],
+//   },
+// ];
