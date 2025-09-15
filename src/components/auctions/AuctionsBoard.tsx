@@ -38,7 +38,7 @@ function formatRemaining(ms: number) {
   return `${pad(h)}:${pad(m)}:${pad(ss)}`;
 }
 
-export default function AuctionsBoard({ title = "Auctions" }: Props) {
+export default function AuctionsBoard({ title = "" }: Props) {
   const [auctions, setAuctions] = useState<AuctionItem[]>([]);
   const [bids, setBids] = useState<Record<string, string>>({});
   const account = useActiveAccount();
