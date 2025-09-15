@@ -191,6 +191,7 @@ export default function BuySellPage({ address, chain }: Props) {
 
       await sendAndConfirmTransaction({ account, transaction: tx });
       setStatus("NFT sent.");
+      window.alert("NFT sent successfully.");
       setSelectedNFT(null);
     } catch (e: any) {
       setStatus(`Send failed: ${e?.message || e}`);

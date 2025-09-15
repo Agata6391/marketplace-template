@@ -41,6 +41,7 @@ export default function CreateAuction({
       currency: c,
       endTime,
     });
+      window.alert("Auction created.");
 
     if (onCreated) onCreated();
   }
