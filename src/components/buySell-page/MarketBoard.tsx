@@ -1,4 +1,4 @@
-// src/components/buySell-page/MarketBoard.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,7 +10,7 @@ import { useActiveAccount } from "thirdweb/react";
 
 type Props = { title?: string };
 
-export default function MarketBoard({ title = "Marketplace" }: Props) {
+export default function MarketBoard({ title = "" }: Props) {
   const [listings, setListings] = useState<ListingItem[]>([]);
   const account = useActiveAccount();
 
