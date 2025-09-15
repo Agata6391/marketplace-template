@@ -19,14 +19,14 @@ export type NftContract = {
  * In reality, the list should be dynamically fetched from your own data source
  */
 export const NFT_CONTRACTS: NftContract[] = [
-  {
-    address: "0x6b869a0cF84147f05a447636c42b8E53De65714E",
-    chain: avalancheFuji,
-    title: "Steakhouse: Liberatorz",
-    thumbnailUrl:
-      "https://258c828e8cc853bf5e0efd001055fb39.ipfscdn.io/ipfs/bafybeigonh3hde5suwcb3qvkh6ljtvxv7ubfmcqbwfvi3ihoi3igd27jwe/SteakhouseLogo.svg",
-    type: "ERC721",
-  },
+  // {
+  //   address: "0x6b869a0cF84147f05a447636c42b8E53De65714E",
+  //   chain: avalancheFuji,
+  //   title: "Steakhouse: Liberatorz",
+  //   thumbnailUrl:
+  //     "https://258c828e8cc853bf5e0efd001055fb39.ipfscdn.io/ipfs/bafybeigonh3hde5suwcb3qvkh6ljtvxv7ubfmcqbwfvi3ihoi3igd27jwe/SteakhouseLogo.svg",
+  //   type: "ERC721",
+  // },
   
   {
     address: "",

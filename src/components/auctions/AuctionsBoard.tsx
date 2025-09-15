@@ -1,18 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Box,
-  Card,
-  CardBody,
-  CardHeader,
-  Flex,
-  Heading,
-  Image,
-  Text,
-  Button,
-  Input,
-} from "@chakra-ui/react";
+import { Box, Card, CardBody, CardHeader, Flex, Heading, Image, Text, Button, Input, Tooltip } from "@chakra-ui/react";
+
 import {
   auctionStore,
   type AuctionItem,
@@ -20,6 +10,19 @@ import {
   AUCTIONS_EVENT,
 } from "@/utils/auctionStore";
 import { useActiveAccount } from "thirdweb/react";
+
+const formatDateTime = (ms: number) =>
+  new Date(ms).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZoneName: "short",
+  });
+
 
 const short = (addr?: string) =>
   addr ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : "—";
@@ -100,6 +103,7 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
 
   function renderCard(a: AuctionItem) {
     const remaining = a.endTime - Date.now();
+    const endLabel = formatDateTime(a.endTime);
 
     return (
       <Box
@@ -125,7 +129,7 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
         <Text fontSize="xs" color="muted">
           #{a.tokenId} • {a.collection.slice(0, 6)}…{a.collection.slice(-4)}
         </Text>
-        {/* NUEVO */}
+        {/* New*/}
         <Text fontSize="xs" color="muted" mt="2">
           Seller: {short(a.seller)}
         </Text>
@@ -146,9 +150,13 @@ export default function AuctionsBoard({ title = "Auctions" }: Props) {
             <Text fontSize="sm" color="text">
               Top bid: {a.currentBid ? `${a.currentBid} ${a.currency}` : "—"}
             </Text>
-            <Text fontSize="sm" color="muted">
-              Time left: {formatRemaining(remaining)}
-            </Text>
+          
+            <Tooltip label={`Ends on ${endLabel}`} openDelay={200} placement="top">
+        <Text fontSize="sm" color="muted">
+          Time left: {formatRemaining(remaining)}
+        </Text>
+      </Tooltip>
+      <Text fontSize="xs" color="muted">Ends: {endLabel}</Text>
 
             <Flex gap="2" mt="8px">
               <Input
