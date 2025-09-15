@@ -43,6 +43,8 @@ export default function CreateListingLocal({
     });
 
     if (onListed) onListed();
+
+    
   }
 
   return (

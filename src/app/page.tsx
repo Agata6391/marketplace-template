@@ -1,22 +1,12 @@
 "use client";
 
 import { Link } from "@chakra-ui/next-js";
-import {
-  Box,
-  Card,
-  CardBody,
-  CardHeader,
-  Flex,
-  Heading,
-  Image,
-  Stack,
-  StackDivider,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Card, CardBody, CardHeader, Flex, Heading, Image, Stack, StackDivider, Text } from "@chakra-ui/react";
 import BuySellPage from "@/components/buySell-page/buysellpage";
 import { NFT_CONTRACTS } from "@/consts/nft_contracts";
 import { hederaMainnet } from "@/consts/chains";
 import MarketBoard from "@/components/buySell-page/MarketBoard";
+import AuctionsBoard from "@/components/auctions/AuctionsBoard"
 export default function Page() {
   return (
     <>
@@ -29,6 +19,9 @@ export default function Page() {
               <CardHeader>
                 <Heading size="md">Marketplace UndeadBlocks</Heading>
               </CardHeader>
+                
+
+
               {/* <CardBody>
                 <Stack divider={<StackDivider />} spacing="4">
                   {_latestUpdates.map((item) => (
@@ -97,11 +90,17 @@ export default function Page() {
         <Box>
           <Heading size="lg" mb="4">Marketplace</Heading>
           <MarketBoard />
+            <Box mt="40px">
+                  <Heading size="lg" mb="4">Auctions</Heading>
+                  <AuctionsBoard />
+            </Box>
         </Box>
       </Flex>
     </>
   );
-}
+};
+
+
 
 // const _latestUpdates: Array<{ title: string; bullet_points: string[] }> = [
 //   {
