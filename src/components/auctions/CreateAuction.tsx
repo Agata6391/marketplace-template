@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState } from "react";
-import { Flex, Input, Select, Button } from "@chakra-ui/react";
+import { Box, Flex, Input, Select, Button } from "@chakra-ui/react";
 import { auctionStore } from "@/utils/auctionStore";
 
 type Props = {
@@ -10,7 +11,7 @@ type Props = {
   tokenId: string;
   name: string;
   image: string;
-  onCreated?: () => void;
+  onCreated?: () => void; // optional callback after creation
 };
 
 export default function CreateAuction({
@@ -21,55 +22,69 @@ export default function CreateAuction({
   image,
   onCreated,
 }: Props) {
-  const [startPrice, setStartPrice] = useState("0.1");
-  const [currency, setCurrency] = useState("HBAR");
-  const [durationMinutes, setDurationMinutes] = useState("60"); // 1h
+  // simple local form state
+  const [startPrice, setStartPrice] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("HBAR");
+  const [durationMinutes, setDurationMinutes] = useState<string>("60");
 
   function onCreate() {
-    const p = (startPrice || "").trim();
-    const c = (currency || "HBAR").trim();
+    // generate a strong unique id so remove() deletes only one auction
+    const id =
+      typeof crypto !== "undefined" && (crypto as any).randomUUID
+        ? (crypto as any).randomUUID()
+        : `${collection}-${tokenId}-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 8)}`;
+
     const minutes = parseInt(durationMinutes || "60", 10);
     const endTime = Date.now() + minutes * 60_000;
 
     auctionStore.add({
+      id,
       seller,
       collection,
       tokenId,
       name,
       image,
-      startPrice: p || "0",
-      currency: c,
+      startPrice: (startPrice || "0").trim(),
+      currency: (currency || "HBAR").trim(),
       endTime,
+      createdAt: Date.now(),
     });
-      window.alert("Auction created.");
 
+    window.alert("Auction created.");
     if (onCreated) onCreated();
   }
 
   return (
-    <Flex gap={2} align="center" wrap="wrap">
-      <Input
-        value={startPrice}
-        onChange={(e) => setStartPrice(e.target.value)}
-        placeholder="Start price"
-        width="140px"
-        size="sm"
-      />
-      <Select value={currency} onChange={(e) => setCurrency(e.target.value)} width="120px" size="sm">
-        <option value="HBAR">HBAR</option>
-        <option value="ETH">ETH</option>
-        <option value="USDC">USDC</option>
-      </Select>
-      <Input
-        value={durationMinutes}
-        onChange={(e) => setDurationMinutes(e.target.value)}
-        placeholder="Duration (min)"
-        width="160px"
-        size="sm"
-      />
-      <Button size="sm" colorScheme="green" onClick={onCreate}>
-        Create auction
-      </Button>
-    </Flex>
+    <Box>
+      {/* basic inline form */}
+      <Flex gap="2" wrap="wrap">
+        <Input
+          placeholder="Start price"
+          value={startPrice}
+          onChange={(e) => setStartPrice(e.target.value)}
+          w="140px"
+        />
+        <Select
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value)}
+          w="120px"
+        >
+          <option value="HBAR">HBAR</option>
+          <option value="ETH">ETH</option>
+          <option value="USDC">USDC</option>
+        </Select>
+        <Input
+          placeholder="Duration (minutes)"
+          value={durationMinutes}
+          onChange={(e) => setDurationMinutes(e.target.value)}
+          w="180px"
+        />
+        <Button colorScheme="purple" onClick={onCreate}>
+          Create auction
+        </Button>
+      </Flex>
+    </Box>
   );
 }
