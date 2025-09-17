@@ -19,7 +19,7 @@ export default function RootLayout({
 			<body style={{ paddingBottom: "100px" }}>
 				<Providers>
 					<AutoConnect client={client} />
-					<Navbar />
+					{/* <Navbar /> */}
 					{children}
 				</Providers>
 			</body>
