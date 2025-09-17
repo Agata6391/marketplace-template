@@ -1,4 +1,4 @@
-// src/utils/marketStore.ts
+
 // Local listings store backed by localStorage with change notifications
 
 export type ListingItem = {
