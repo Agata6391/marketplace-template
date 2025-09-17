@@ -5,6 +5,7 @@ import BuySellPage from "@/components/buySell-page/buysellpage";
 import MarketBoard from "@/components/buySell-page/MarketBoard";
 import { hederaMainnet } from "@/consts/chains";
 
+
 export default function MarketPage() {
   return (
     <Flex direction="column" gap="8" mt="24px" mx="auto" maxW="1200px">

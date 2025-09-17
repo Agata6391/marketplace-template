@@ -26,7 +26,7 @@ import NftAttributesModal from "@/components/nft/NftAttributesModal";
 // --- Config ---
 const PAGE_SIZE = 5;                 // how many listings per page
 const MAX_PAGE_BUTTONS = 5;          // how many numbered buttons to show
-const REMOVE_MODE: "alert" | "mutate" = "mutate"; // set to "alert" to avoid mutating the store
+const REMOVE_MODE: "alert" | "mutate" = "mutate"; // "alert" -> only alerts; "mutate" -> updates store
 
 // --- Helpers ---
 function getPageWindow(current: number, total: number, max = 5) {
@@ -49,7 +49,7 @@ function fmtPrice(price?: string | number, currency?: string) {
 export default function MarketBoard() {
   const account = useActiveAccount();
 
-  // ✅ Hooks must be inside the component
+  // Attributes modal state
   const [attrOpen, setAttrOpen] = useState(false);
   const [attrItem, setAttrItem] = useState<ListingItem | null>(null);
 
@@ -97,11 +97,11 @@ export default function MarketBoard() {
       return;
     }
     if (REMOVE_MODE === "mutate") {
-      // Option A: markSold if your store supports it
+      // Option A: if your store implements markSold
       // marketStore.markSold?.(id, account.address);
-      // Option B: remove the item
+      // Option B: remove item from store
       marketStore.remove(id);
-      setAll(marketStore.all()); // refresh UI
+      setAll(marketStore.all());
     }
     window.alert("Purchase completed.");
   };
@@ -113,7 +113,7 @@ export default function MarketBoard() {
     }
     if (REMOVE_MODE === "mutate") {
       marketStore.remove(id);
-      setAll(marketStore.all()); // refresh UI
+      setAll(marketStore.all());
     }
     window.alert("Listing removed.");
   };
@@ -147,7 +147,7 @@ export default function MarketBoard() {
                     w="260px"
                   >
                     <Image
-                      src={l.image || "/images/dummynts/default-nft.png"}
+                      src={l.image || "/images/dummynfts/default-nft.png"}
                       alt={l.name || `#${l.tokenId}`}
                       w="100%"
                       h="200px"
@@ -174,7 +174,7 @@ export default function MarketBoard() {
                           size="xs"
                           variant="outline"
                           onClick={() => {
-                            setAttrItem(l);
+                            setAttrItem(l as any); // supports optional attributes if you add them later
                             setAttrOpen(true);
                           }}
                         >
@@ -186,36 +186,63 @@ export default function MarketBoard() {
                     {/* Actions */}
                     <Flex mt="3" gap="2">
                       {isOwner(l.seller) ? (
-                        <Tooltip
-                          label={!account?.address ? "Connect a wallet to remove." : ""}
-                        >
+                        // OWNER: show Remove (handle Tooltip correctly)
+                        !account?.address ? (
+                          // Disabled button without Tooltip (Tooltip + disabled breaks)
                           <Button
                             size="sm"
                             variant="outline"
                             colorScheme="red"
-                            onClick={() => onRemove(l.id)}
-                            isDisabled={!account?.address}
+                            isDisabled
                             className="udb-btn udb-btn--remove"
                             w="full"
                           >
                             Remove
                           </Button>
-                        </Tooltip>
+                        ) : (
+                          // Tooltip must have exactly ONE child; wrap Button in a span
+                          <Tooltip label="Remove">
+                            <span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                colorScheme="red"
+                                onClick={() => onRemove(l.id)}
+                                className="udb-btn udb-btn--remove"
+                                w="full"
+                              >
+                                Remove
+                              </Button>
+                            </span>
+                          </Tooltip>
+                        )
                       ) : (
-                        <Tooltip
-                          label={!account?.address ? "Connect a wallet to buy." : ""}
-                        >
+                        // NOT OWNER: show Buy (same Tooltip rule)
+                        !account?.address ? (
                           <Button
                             size="sm"
                             colorScheme="purple"
-                            onClick={() => onBuy(l.id)}
-                            isDisabled={!account?.address}
+                            isDisabled
                             className="udb-btn udb-btn--buy"
                             w="full"
                           >
                             Buy
                           </Button>
-                        </Tooltip>
+                        ) : (
+                          <Tooltip label="Buy">
+                            <span>
+                              <Button
+                                size="sm"
+                                colorScheme="purple"
+                                onClick={() => onBuy(l.id)}
+                                className="udb-btn udb-btn--buy"
+                                w="full"
+                              >
+                                Buy
+                              </Button>
+                            </span>
+                          </Tooltip>
+                        )
                       )}
                     </Flex>
 
@@ -275,15 +302,15 @@ export default function MarketBoard() {
         </CardBody>
       </Card>
 
-      {/* Modal */}
+      {/* Attributes Modal */}
       <NftAttributesModal
         isOpen={attrOpen}
         onClose={() => setAttrOpen(false)}
-        name={attrItem?.name}
-        image={attrItem?.image}
-        tokenId={attrItem?.tokenId}
-        collection={attrItem?.collection}
-        attributes={attrItem?.attributes}
+        name={(attrItem as any)?.name}
+        image={(attrItem as any)?.image}
+        tokenId={(attrItem as any)?.tokenId}
+        collection={(attrItem as any)?.collection}
+        attributes={(attrItem as any)?.attributes}
       />
     </>
   );
