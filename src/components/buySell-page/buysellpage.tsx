@@ -12,6 +12,7 @@ import {
   Box,
   Image,
   Button,
+  Tooltip,
 } from "@chakra-ui/react";
 
 import { client } from "@/consts/client";
@@ -32,7 +33,7 @@ import {
 import { getOwnedTokenIds, isApprovedForAll } from "thirdweb/extensions/erc721";
 import { hederaMainnet } from "@/consts/chains";
 
-// Local listing/auction (kept for live compatibility if you want to reuse logic inside modals)
+// Optional local actions (kept for live compatibility if you reuse logic)
 import CreateListingLocal from "@/components/buySell-page/CreateListingLocal";
 import CreateAuction from "@/components/auctions/CreateAuction";
 
@@ -99,7 +100,7 @@ const DEFAULT_ITEMS: NftItem[] = [
       { trait_type: "Stock", value: 244 },
     ],
   },
-    {
+  {
     id: "3",
     title: "Weapon #1",
     image: "/images/dummynfts/default-nft1.png",
@@ -108,9 +109,9 @@ const DEFAULT_ITEMS: NftItem[] = [
       { trait_type: "Stock", value: 244 },
     ],
   },
-   {
+  {
     id: "4",
-    title: "weapon #2",
+    title: "Weapon #2",
     image: "/images/dummynfts/default-nft0.png",
     attributes: [
       { trait_type: "Type", value: "Weapon" },
@@ -217,37 +218,28 @@ export default function BuySellPage({ address, chain }: Props) {
   const [listOpen, setListOpen] = useState(false);
   const [auctionOpen, setAuctionOpen] = useState(false);
 
-  // Toggle a single action modal and ensure others are closed
-  function toggleModal(which: "send" | "list" | "auction") {
-    if (which === "send") {
-      setSendOpen((v) => {
-        const next = !v;
-        if (next) {
-          setListOpen(false);
-          setAuctionOpen(false);
-        }
-        return next;
-      });
-    } else if (which === "list") {
-      setListOpen((v) => {
-        const next = !v;
-        if (next) {
-          setSendOpen(false);
-          setAuctionOpen(false);
-        }
-        return next;
-      });
-    } else {
-      setAuctionOpen((v) => {
-        const next = !v;
-        if (next) {
-          setSendOpen(false);
-          setListOpen(false);
-        }
-        return next;
-      });
+  // Connection guard
+  const isConnected = !!account?.address;
+
+  // Centralized opener: prevents opening when wallet is disconnected
+  function openAction(which: "send" | "list" | "auction") {
+    if (!isConnected) {
+      window.alert("Connect a wallet to continue.");
+      return;
     }
+    setSendOpen(which === "send");
+    setListOpen(which === "list");
+    setAuctionOpen(which === "auction");
   }
+
+  // Close action modals when wallet disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      setSendOpen(false);
+      setListOpen(false);
+      setAuctionOpen(false);
+    }
+  }, [isConnected]);
 
   // Close modals when selection changes
   useEffect(() => {
@@ -318,7 +310,7 @@ export default function BuySellPage({ address, chain }: Props) {
     }
   }
 
-  // Example send (live) - remains here if you use it from SendNftModal later
+  // Example send (live) - remains here if you wire it into SendNftModal later
   async function handleSend() {
     if (useLocalFallback) {
       setStatus("Sending is not available in this view.");
@@ -396,9 +388,7 @@ export default function BuySellPage({ address, chain }: Props) {
               p="2"
               rounded="md"
               cursor="pointer"
-              bg={
-                selectedNFT?.id === nft.id ? "chakra-subtle-bg" : "chakra-body-bg"
-              }
+              bg={selectedNFT?.id === nft.id ? "chakra-subtle-bg" : "chakra-body-bg"}
               onClick={() => setSelectedNFT(nft)}
             >
               <Image src={nft.image} alt={nft.title} boxSize="96px" objectFit="cover" />
@@ -489,7 +479,7 @@ export default function BuySellPage({ address, chain }: Props) {
                 ) : (
                   <TransactionButton
                     transaction={async () => {
-                      // make sure user is on the right chain
+                      // ensure user is on the right chain
                       if (activeChain?.id !== effectiveChain.id) {
                         await switchChain(effectiveChain);
                       }
@@ -510,26 +500,56 @@ export default function BuySellPage({ address, chain }: Props) {
               </Box>
             )}
 
-            {/* Open action modals */}
-            <Flex gap="3" mt="4">
-              <Button colorScheme="red" onClick={() => toggleModal("send")}>
-                Send
-              </Button>
-              <Button
-                colorScheme="purple"
-                onClick={() => toggleModal("list")}
-                isDisabled={!account?.address}
-              >
-                Sell
-              </Button>
-              <Button
-                colorScheme="orange"
-                onClick={() => toggleModal("auction")}
-                isDisabled={!account?.address}
-              >
-                Auction
-              </Button>
-            </Flex>
+            {/* Open action modals (guarded and disabled when disconnected) */}
+          {/* Action triggers with hover tooltip when disconnected */}
+<Flex gap="3" mt="4">
+  {/* Send */}
+  <Tooltip
+    // Disable the tooltip when connected so it doesn't show
+    isDisabled={isConnected}
+    label="Connect a wallet."
+    placement="top"
+    hasArrow
+  >
+    {/* Wrap disabled Button in a span so Tooltip can attach hover events */}
+    <span>
+      <Button
+        colorScheme="red"
+        onClick={() => openAction("send")}
+        isDisabled={!isConnected}
+      >
+        Send
+      </Button>
+    </span>
+  </Tooltip>
+
+  {/* Sell */}
+  <Tooltip isDisabled={isConnected} label="Connect a wallet." placement="top" hasArrow>
+    <span>
+      <Button
+        colorScheme="purple"
+        onClick={() => openAction("list")}
+        isDisabled={!isConnected}
+      >
+        Sell
+      </Button>
+    </span>
+  </Tooltip>
+
+  {/* Auction */}
+  <Tooltip isDisabled={isConnected} label="Connect a wallet." placement="top" hasArrow>
+    <span>
+      <Button
+        colorScheme="orange"
+        onClick={() => openAction("auction")}
+        isDisabled={!isConnected}
+      >
+        Auction
+      </Button>
+    </span>
+  </Tooltip>
+</Flex>
+
           </Box>
         )}
 
@@ -547,20 +567,20 @@ export default function BuySellPage({ address, chain }: Props) {
           chain={hederaMainnet}
         />
 
-        {/* Action Modals */}
+        {/* Action Modals (never open when disconnected) */}
         <SendNftModal
-          isOpen={sendOpen}
+          isOpen={sendOpen && isConnected}
           onClose={() => setSendOpen(false)}
           chain={hederaMainnet}
           name={selectedNFT?.title}
           image={selectedNFT?.image}
           tokenId={selectedNFT?.id}
           collection={address || ""}
-          // You can pass a callback that uses handleSend on live mode if needed
+          // Hook up onSubmit to handleSend() when you go live
         />
 
         <ListNftModal
-          isOpen={listOpen}
+          isOpen={listOpen && isConnected}
           onClose={() => setListOpen(false)}
           name={selectedNFT?.title}
           image={selectedNFT?.image}
@@ -570,7 +590,7 @@ export default function BuySellPage({ address, chain }: Props) {
         />
 
         <AuctionNftModal
-          isOpen={auctionOpen}
+          isOpen={auctionOpen && isConnected}
           onClose={() => setAuctionOpen(false)}
           name={selectedNFT?.title}
           image={selectedNFT?.image}
@@ -582,7 +602,3 @@ export default function BuySellPage({ address, chain }: Props) {
     </Card>
   );
 }
-
-
-
-
