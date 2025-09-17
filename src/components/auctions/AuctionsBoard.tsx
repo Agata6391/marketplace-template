@@ -11,6 +11,7 @@ import {
   CHANGE_EVENT as AUCTION_EVENT,
   STORAGE_KEY as AUCTION_KEY,
 } from "@/utils/auctionStore";
+import NftAttributesModal from "@/components/nft/NftAttributesModal";
 
 // Pagination config
 const PAGE_SIZE = 5;                 // how many auctions per page
@@ -46,6 +47,10 @@ export default function AuctionsBoard() {
   const [all, setAll] = useState<AuctionItem[]>([]);
   const [filter, setFilter] = useState<Filter>("open");
   const [page, setPage] = useState(1);
+
+  // State for the attributes modal (hooks MUST be inside the component)
+  const [attrOpen, setAttrOpen] = useState(false);
+  const [attrItem, setAttrItem] = useState<AuctionItem | null>(null);
 
   // Load/listen store
   useEffect(() => {
@@ -116,159 +121,189 @@ export default function AuctionsBoard() {
     seller.toLowerCase() === account.address.toLowerCase();
 
   return (
-    <Card border="1px">
-      <CardHeader>
-        <Flex align="center" justify="space-between">
-          <Heading size="md">Auctions</Heading>
-          {/* Simple filter buttons */}
-          <ButtonGroup size="sm" isAttached>
-            <Button
-              variant={filter === "open" ? "solid" : "outline"}
-              onClick={() => { setFilter("open"); setPage(1); }}
-            >
-              Open
-            </Button>
-            <Button
-              variant={filter === "closed" ? "solid" : "outline"}
-              onClick={() => { setFilter("closed"); setPage(1); }}
-            >
-              Closed
-            </Button>
-          </ButtonGroup>
-        </Flex>
-      </CardHeader>
+    <>
+      <Card border="1px">
+        <CardHeader>
+          <Flex align="center" justify="space-between">
+            <Heading size="md">Auctions</Heading>
+            {/* Simple filter buttons */}
+            <ButtonGroup size="sm" isAttached>
+              <Button
+                variant={filter === "open" ? "solid" : "outline"}
+                onClick={() => { setFilter("open"); setPage(1); }}
+              >
+                Open
+              </Button>
+              <Button
+                variant={filter === "closed" ? "solid" : "outline"}
+                onClick={() => { setFilter("closed"); setPage(1); }}
+              >
+                Closed
+              </Button>
+            </ButtonGroup>
+          </Flex>
+        </CardHeader>
 
-      <CardBody>
-        {filtered.length === 0 ? (
-          <Text>No auctions.</Text>
-        ) : (
-          <>
-            {/* Grid */}
-            <Flex gap="4" wrap="wrap">
-              {pageItems.map((a) => {
-                const closed = isClosed(a);
-                return (
-                  <Box key={a.id} border="1px" p="3" rounded="md" w="260px" opacity={closed ? 0.7 : 1}>
-                    <Image
-                      src={a.image || "/images/dummynts/default-nft.png"}
-                      alt={a.name || `#${a.tokenId}`}
-                      w="100%"
-                      h="200px"
-                      objectFit="cover"
-                      rounded="md"
-                    />
+        <CardBody>
+          {filtered.length === 0 ? (
+            <Text>No auctions.</Text>
+          ) : (
+            <>
+              {/* Grid */}
+              <Flex gap="4" wrap="wrap">
+                {pageItems.map((a) => {
+                  const closed = isClosed(a);
+                  return (
+                    <Box key={a.id} border="1px" p="3" rounded="md" w="260px" opacity={closed ? 0.7 : 1}>
+                      <Image
+                        src={a.image || "/images/dummynfts/default-nft.png"}
+                        alt={a.name || `#${a.tokenId}`}
+                        w="100%"
+                        h="200px"
+                        objectFit="cover"
+                        rounded="md"
+                      />
 
-                    <Box mt="2">
-                      <Text fontWeight="bold" noOfLines={1}>
-                        {a.name || `Token #${a.tokenId}`}
-                      </Text>
-                      <Text fontSize="sm" color="gray.500" noOfLines={1}>
-                        {short(a.collection)}
-                      </Text>
+                      <Box mt="2">
+                        <Text fontWeight="bold" noOfLines={1}>
+                          {a.name || `Token #${a.tokenId}`}
+                        </Text>
+                        <Text fontSize="sm" color="gray.500" noOfLines={1}>
+                          {short(a.collection)}
+                        </Text>
 
-                      <Flex mt="1" justify="space-between" fontSize="sm">
-                        <Text>Start</Text>
-                        <Text>{fmtPrice(a.startPrice, a.currency)}</Text>
-                      </Flex>
+                        <Flex mt="1" justify="space-between" fontSize="sm">
+                          <Text>Start</Text>
+                          <Text>{fmtPrice(a.startPrice, a.currency)}</Text>
+                        </Flex>
 
-                      <Flex mt="1" justify="space-between" fontSize="xs" color="gray.600">
-                        <Text>Ends</Text>
-                        <Text>{new Date(a.endTime).toLocaleString()}</Text>
-                      </Flex>
+                        <Flex mt="1" justify="space-between" fontSize="xs" color="gray.600">
+                          <Text>Ends</Text>
+                          <Text>{new Date(a.endTime).toLocaleString()}</Text>
+                        </Flex>
 
-                      <Text mt="1" fontSize="xs" color={closed ? "red.500" : "green.500"}>
-                        {closed ? "Closed" : "Open"}
-                      </Text>
-                    </Box>
+                        <Text mt="1" fontSize="xs" color={closed ? "red.500" : "green.500"}>
+                          {closed ? "Closed" : "Open"}
+                        </Text>
 
-                    {/* Actions */}
-                    <Flex mt="3" gap="2">
-                      {isOwner(a.seller) ? (
-                        <>
+                        {/* Attributes button */}
+                        <Flex mt="2" justify="flex-end">
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAttrItem(a);
+                              setAttrOpen(true);
+                            }}
+                          >
+                            Attributes
+                          </Button>
+                        </Flex>
+                      </Box>
+
+                      {/* Actions */}
+                      <Flex mt="3" gap="2">
+                        {isOwner(a.seller) ? (
+                          <>
+                            <Tooltip label={!account?.address ? "Connect a wallet." : ""}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                colorScheme="red"
+                                onClick={() => onRemove(a.id)}
+                                isDisabled={!account?.address}
+                                w="full"
+                              >
+                                Remove
+                              </Button>
+                            </Tooltip>
+                            <Tooltip label={!account?.address ? "Connect a wallet." : ""}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                colorScheme="orange"
+                                onClick={() => onClose(a.id)}
+                                isDisabled={!account?.address || closed}
+                                w="full"
+                              >
+                                Close
+                              </Button>
+                            </Tooltip>
+                          </>
+                        ) : (
                           <Tooltip label={!account?.address ? "Connect a wallet." : ""}>
                             <Button
                               size="sm"
-                              variant="outline"
-                              colorScheme="red"
-                              onClick={() => onRemove(a.id)}
-                              isDisabled={!account?.address}
-                              w="full"
-                            >
-                              Remove
-                            </Button>
-                          </Tooltip>
-                          <Tooltip label={!account?.address ? "Connect a wallet." : ""}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              colorScheme="orange"
-                              onClick={() => onClose(a.id)}
+                              colorScheme="purple"
+                              onClick={() => onBid(a.id)}
                               isDisabled={!account?.address || closed}
                               w="full"
                             >
-                              Close
+                              Bid
                             </Button>
                           </Tooltip>
-                        </>
-                      ) : (
-                        <Tooltip label={!account?.address ? "Connect a wallet." : ""}>
-                          <Button
-                            size="sm"
-                            colorScheme="purple"
-                            onClick={() => onBid(a.id)}
-                            isDisabled={!account?.address || closed}
-                            w="full"
-                          >
-                            Bid
-                          </Button>
-                        </Tooltip>
-                      )}
-                    </Flex>
+                        )}
+                      </Flex>
 
-                    <Text mt="2" fontSize="xs" color="gray.500">
-                      Seller: {short(a.seller)}
-                    </Text>
-                  </Box>
-                );
-              })}
-            </Flex>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Flex mt="16px" align="center" justify="center" gap="2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  isDisabled={page === 1}
-                >
-                  &lt; PREVIOUS
-                </Button>
-
-                {getPageWindow(page, totalPages, MAX_PAGE_BUTTONS).map((p) => (
-                  <Button
-                    key={p}
-                    size="sm"
-                    variant={p === page ? "solid" : "ghost"}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </Button>
-                ))}
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  isDisabled={page === totalPages}
-                >
-                  NEXT &gt;
-                </Button>
+                      <Text mt="2" fontSize="xs" color="gray.500">
+                        Seller: {short(a.seller)}
+                      </Text>
+                    </Box>
+                  );
+                })}
               </Flex>
-            )}
-          </>
-        )}
-      </CardBody>
-    </Card>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Flex mt="16px" align="center" justify="center" gap="2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    isDisabled={page === 1}
+                  >
+                    &lt; PREVIOUS
+                  </Button>
+
+                  {getPageWindow(page, totalPages, MAX_PAGE_BUTTONS).map((p) => (
+                    <Button
+                      key={p}
+                      size="sm"
+                      variant={p === page ? "solid" : "ghost"}
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  ))}
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    isDisabled={page === totalPages}
+                  >
+                    NEXT &gt;
+                  </Button>
+                </Flex>
+              )}
+            </>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Attributes modal */}
+      <NftAttributesModal
+        isOpen={attrOpen}
+        onClose={() => setAttrOpen(false)}
+        name={attrItem?.name}
+        image={attrItem?.image}
+        tokenId={attrItem?.tokenId}
+        collection={attrItem?.collection}
+        // If your AuctionItem does not have attributes in store,
+        // the modal will attempt to resolve them from tokenURI.
+        attributes={(attrItem as any)?.attributes}
+      />
+    </>
   );
 }

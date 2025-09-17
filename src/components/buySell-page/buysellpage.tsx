@@ -1,4 +1,3 @@
-// src/components/buySell-page/buysellpage.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -36,13 +35,19 @@ import { hederaMainnet } from "@/consts/chains";
 import CreateListingLocal from "@/components/buySell-page/CreateListingLocal";
 // Optional: auctions module
 import CreateAuction from "@/components/auctions/CreateAuction";
-
+import NftAttributesModal from "@/components/nft/NftAttributesModal";
 type Props = {
   address?: string; // may be empty/invalid; component will fall back to a neutral view
-  chain?: Chain;    // may be undefined -> fallback to hederaMainnet
+  chain?: Chain; // may be undefined -> fallback to hederaMainnet
 };
 
-type NftItem = { id: string; title: string; image: string };
+type Trait = { trait_type?: string; value?: any; display_type?: string };
+type NftItem = {
+  id: string;
+  title: string;
+  image: string;
+  attributes?: Trait[];
+};
 
 // --- Helpers ---
 function ipfsToHttp(uri?: string) {
@@ -60,23 +65,33 @@ function getPageWindow(current: number, total: number, max = 5) {
   const half = Math.floor(max / 2);
   let start = Math.max(1, current - half);
   let finish = start + max - 1;
-  if (finish > total) { finish = total; start = total - max + 1; }
+  if (finish > total) {
+    finish = total;
+    start = total - max + 1;
+  }
   return Array.from({ length: finish - start + 1 }, (_, i) => start + i);
 }
 
 // Neutral local items used when no contract address is configured or invalid
 const DEFAULT_ITEMS: NftItem[] = [
-  { id: "1", title: "Sword #1", image: "/images/dummynfts/default-nft.png" },
-  { id: "2", title: "Shield #2", image: "/images/dummynfts/default-nft0.png" },
-  { id: "3", title: "Helmet #3", image: "/images/dummynfts/default-nft1.png" },
-  { id: "5", title: "Helmet #5", image: "/images/dummynfts/default-nft.png" },
-  { id: "6", title: "Helmet #6", image: "/images/dummynfts/default-nft.png" },
-  { id: "7", title: "Helmet #7", image: "/images/dummynfts/default-nft.png" },
-  { id: "8", title: "Sword #2", image: "/images/dummynfts/default-nft1.png" },
-  { id: "9", title: "Helmet #9", image: "/images/dummynfts/default-nft.png" },
-  { id: "10", title: "Helmet #10", image: "/images/dummynfts/default-nft.png" },
-  { id: "11", title: "Helmet #11", image: "/images/dummynfts/default-nft.png" },
-  { id: "12", title: "Helmet #12", image: "/images/dummynfts/default-nft.png" },
+  {
+    id: "1",
+    title: "Sword #1",
+    image: "/images/dummynfts/default-nft.png",
+    attributes: [
+      { trait_type: "Type", value: "Sword" },
+      { trait_type: "Stock", value: 244 },
+    ],
+  },
+  {
+    id: "2",
+    title: "Helm #1",
+    image: "/images/dummynfts/default-nft0.png",
+    attributes: [
+      { trait_type: "Type", value: "Helm" },
+      { trait_type: "Stock", value: 244 },
+    ],
+  },
 ];
 
 // MarketplaceV3 address (replace with a real one when ready)
@@ -116,10 +131,16 @@ export default function BuySellPage({ address, chain }: Props) {
     [effectiveChain]
   );
 
-  const { data: ownedIds, isLoading, error } = useReadContract(getOwnedTokenIds, {
+  const {
+    data: ownedIds,
+    isLoading,
+    error,
+  } = useReadContract(getOwnedTokenIds, {
     contract: useLocalFallback ? dummyContract : (realContract as any),
     owner: account?.address,
-    queryOptions: { enabled: !useLocalFallback && !!realContract && !!account?.address },
+    queryOptions: {
+      enabled: !useLocalFallback && !!realContract && !!account?.address,
+    },
   });
 
   // Approval state (only meaningful when working with a real contract)
@@ -128,7 +149,7 @@ export default function BuySellPage({ address, chain }: Props) {
     refetch: refetchApproval,
     isLoading: isLoadingApproval,
   } = useReadContract(isApprovedForAll, {
-    contract: (useLocalFallback ? dummyContract : (realContract as any)),
+    contract: useLocalFallback ? dummyContract : (realContract as any),
     owner: account?.address,
     operator: MARKETPLACE_ADDRESS,
     queryOptions: {
@@ -143,6 +164,9 @@ export default function BuySellPage({ address, chain }: Props) {
   const [items, setItems] = useState<NftItem[]>([]);
   const [selectedNFT, setSelectedNFT] = useState<NftItem | null>(null);
   const [status, setStatus] = useState("");
+  //modal state
+  const [attrOpen, setAttrOpen] = useState(false);
+  const [attrItem, setAttrItem] = useState<NftItem | null>(null);
 
   // --- PAG---
   const [page, setPage] = useState(1);
@@ -151,10 +175,10 @@ export default function BuySellPage({ address, chain }: Props) {
   const end = start + PAGE_SIZE;
   const pageItems = items.slice(start, end);
 
-  // A página válida
+  // valid page
   useEffect(() => {
     if (page > totalPages) setPage(1);
-    // 
+    //
     if (selectedNFT && !pageItems.find((i) => i.id === selectedNFT.id)) {
       setSelectedNFT(null);
     }
@@ -180,9 +204,13 @@ export default function BuySellPage({ address, chain }: Props) {
           const image =
             ipfsToHttp(nft.metadata?.image || nft.metadata?.image_url) ||
             "/images/dummynfts/default-nft.png";
-          return { id: id.toString(), title, image };
+          const attributes = Array.isArray(nft.metadata?.attributes)
+            ? nft.metadata?.attributes
+            : [];
+          return { id: id.toString(), title, image, attributes };
         })
       );
+
       if (!ignore) setItems(details);
     }
     load();
@@ -258,7 +286,7 @@ export default function BuySellPage({ address, chain }: Props) {
           <Text color="red.500">Error: {String(error)}</Text>
         )}
 
-        {/* GRID (usa pageItems) */}
+        {/* GRID (use pageItems) */}
         <Flex gap="4" wrap="wrap">
           {pageItems.map((nft) => (
             <Box
@@ -279,6 +307,21 @@ export default function BuySellPage({ address, chain }: Props) {
               <Text mt="2" noOfLines={1}>
                 {nft.title}
               </Text>
+              {/* attributes */}
+              <Flex mt="2" justify="flex-end">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation(); // do not trigger the select-card on parent
+                    setAttrItem(nft); // nft  id/title/image/attributes
+                    setAttrOpen(true);
+                  }}
+                >
+                  Attributes
+                </Button>
+              </Flex>
+              {/**/}
             </Box>
           ))}
         </Flex>
@@ -289,7 +332,10 @@ export default function BuySellPage({ address, chain }: Props) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setPage((p) => Math.max(1, p - 1)); setSelectedNFT(null); }}
+              onClick={() => {
+                setPage((p) => Math.max(1, p - 1));
+                setSelectedNFT(null);
+              }}
               isDisabled={page === 1}
             >
               &lt; PREVIOUS
@@ -300,7 +346,10 @@ export default function BuySellPage({ address, chain }: Props) {
                 key={p}
                 size="sm"
                 variant={p === page ? "solid" : "ghost"}
-                onClick={() => { setPage(p); setSelectedNFT(null); }}
+                onClick={() => {
+                  setPage(p);
+                  setSelectedNFT(null);
+                }}
               >
                 {p}
               </Button>
@@ -309,7 +358,10 @@ export default function BuySellPage({ address, chain }: Props) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); setSelectedNFT(null); }}
+              onClick={() => {
+                setPage((p) => Math.min(totalPages, p + 1));
+                setSelectedNFT(null);
+              }}
               isDisabled={page === totalPages}
             >
               NEXT &gt;
@@ -378,10 +430,14 @@ export default function BuySellPage({ address, chain }: Props) {
             {/* Create listing (local) */}
             {account?.address && (
               <Box mt="4">
-                <Text mb="2" fontWeight="semibold">Create listing</Text>
+                <Text mb="2" fontWeight="semibold">
+                  Create listing
+                </Text>
                 <CreateListingLocal
                   seller={account.address}
-                  collection={address || "0x000000000000000000000000000000000000dEaD"}
+                  collection={
+                    address || "0x000000000000000000000000000000000000dEaD"
+                  }
                   tokenId={selectedNFT.id}
                   name={selectedNFT.title}
                   image={selectedNFT.image}
@@ -393,10 +449,14 @@ export default function BuySellPage({ address, chain }: Props) {
             {/* Create auction (local) */}
             {account?.address && (
               <Box mt="4">
-                <Text mb="2" fontWeight="semibold">Create auction</Text>
+                <Text mb="2" fontWeight="semibold">
+                  Create auction
+                </Text>
                 <CreateAuction
                   seller={account.address}
-                  collection={address || "0x000000000000000000000000000000000000dEaD"}
+                  collection={
+                    address || "0x000000000000000000000000000000000000dEaD"
+                  }
                   tokenId={selectedNFT.id}
                   name={selectedNFT.title}
                   image={selectedNFT.image}
@@ -408,6 +468,16 @@ export default function BuySellPage({ address, chain }: Props) {
         )}
 
         {status && <Text mt="4">{status}</Text>}
+        <NftAttributesModal
+          isOpen={attrOpen}
+          onClose={() => setAttrOpen(false)}
+          name={attrItem?.title}
+          image={attrItem?.image}
+          tokenId={attrItem?.id}
+          collection={address} //real collection Buy/Sell
+          attributes={attrItem?.attributes}
+          chain={hederaMainnet}
+        />
       </CardBody>
     </Card>
   );
