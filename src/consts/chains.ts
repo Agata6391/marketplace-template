@@ -1,11 +1,14 @@
 import { defineChain } from "thirdweb";
 
 /**
- * All chains should be exported from this file
+ * Export all chains used in your app
  */
 export { avalancheFuji, sepolia, polygonAmoy } from "thirdweb/chains";
 
+// Hedera Mainnet (chainId 295)
+export const hederaMainnet = defineChain(295);
+
 /**
- * Define any custom chain using `defineChain`
+ * Example of how to define a custom chain (replace with a real chainId if needed)
  */
-export const example_customChain1 = defineChain(0.001); // don't actually use this
+// export const customChain = defineChain(12345); // replace 12345 with a valid chainId
