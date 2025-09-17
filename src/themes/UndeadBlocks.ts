@@ -1,5 +1,6 @@
 // src/themes/UndeadBlocks.ts
 import { extendTheme, type ThemeConfig } from "@chakra-ui/react";
+import { BiBorderRadius } from "react-icons/bi";
 
 const config: ThemeConfig = {
   initialColorMode: "system",
@@ -30,18 +31,41 @@ const UndeadBlocks = extendTheme({
   },
 
   /* =========================
-   * GRADIENTES REUSABLES
+   * LAYER STYLES REUSABLES
    * ========================= */
   layerStyles: {
-    // Rojo "glass"
     gradientRed: {
       bgGradient:
         "radial-gradient(531.76% 50% at 50% 50%, rgba(223,30,51,0.70) 0%, rgba(169,23,39,0.70) 62.02%, rgba(86,0,0,0.70) 100%)",
     },
-    // Gris/steel
     gradientGray: {
       bgGradient:
         "radial-gradient(196.62% 50% at 50% 50%, rgba(191,191,191,0.27) 0%, rgba(104,104,106,0.35) 69.53%, rgba(17,17,20,0.40) 100%)",
+    },
+    cardsGrid: {
+      display: "flex",
+      alignItems: "center",
+      gap: "24px",
+      alignSelf: "stretch",
+      flexWrap: "wrap",
+    },
+    itemImage: {
+      w: "full",
+      h: "200px",
+      borderRadius: "12px",
+      overflow: "hidden",
+      bgSize: "contain, cover",
+      bgPos: "50% 50%, 50% 50%",
+      bgRepeat: "no-repeat, no-repeat",
+      boxShadow: "0 4px 4px rgba(0,0,0,0.25)",
+    },
+    itemSummary: {
+      w: "204px",
+      px: "16px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: "4px",
     },
   },
 
@@ -54,98 +78,156 @@ const UndeadBlocks = extendTheme({
         fontWeight: 700,
         letterSpacing: "0.02em",
         position: "relative",
-        _focusVisible: { boxShadow: "0 0 0 2px rgba(147,112,255,0.8)" }, // outline accesible
+        _focusVisible: { boxShadow: "0 0 0 2px rgba(147,112,255,0.8)" },
       },
       sizes: {
-        // Botón 1 (CTA)
         cta:  { h: "36px", px: "20px", minW: "180px" },
-        // Botón 2 (Attributes)
         attr: { h: "30px", px: "20px", minW: "200px" },
       },
       variants: {
-        /* --------------------------------------------------
-         * BOTÓN 1 — CTA (UN SOLO VARIANT, 3 ESTADOS)
-         * default: textura roja profunda
-         * hover:   más brillo (resalta)
-         * active:  rojo más claro + borde menos intenso
-         * -------------------------------------------------- */
+        // Botón 1 — CTA (un solo variant, 3 estados)
         cta: {
-          borderRadius: "10px",
+          borderRadius: "0px",
           color: "white",
-          // Usá tu textura; si no la tenés aún, funciona igual
           bgImage: "url('/textures/cta-red.png')",
           bgSize: "cover",
           bgPos: "50% 50%",
           bgRepeat: "no-repeat",
-
-          border: "1px solid rgba(223,30,51,0.75)",   // #DF1E33 75%
-          boxShadow: "0 4px 4px rgba(0,0,0,0.50)",     // sombra marcada
+          border: "1px solid rgba(223,30,51,0.75)",
+          boxShadow: "0 4px 4px rgba(0,0,0,0.50)",
           transition:
             "filter .15s ease, background-image .15s ease, border-color .15s ease, transform .05s ease, box-shadow .15s ease",
-
-          // HOVER: resalta (look intermedio de tu imagen)
           _hover: {
             filter: "brightness(1.06)",
             borderColor: "rgba(223,30,51,0.75)",
             boxShadow: "0 6px 8px rgba(0,0,0,0.45)",
           },
-
-          // ACTIVE: tono más claro, borde menos intenso
           _active: {
             transform: "translateY(1px)",
-            filter: "brightness(1.12)",               // sube brillo (tu click es más claro)
-            borderColor: "rgba(223,30,51,0.42)",      // 42% como en Figma
+            filter: "brightness(1.12)",
+            borderColor: "rgba(223,30,51,0.42)",
             boxShadow: "0 4px 4px rgba(0,0,0,0.25)",
             textShadow: "0 1px 2px rgba(0,0,0,0.50)",
           },
         },
 
-        /* --------------------------------------------------
-         * BOTÓN 2 — ATTRIBUTES (UN SOLO VARIANT, 3 ESTADOS)
-         * default: steel (gris)
-         * hover:   rojo "glass" (gradient-red)
-         * active:  rojo sólido + borde 2px
-         * -------------------------------------------------- */
+        // Botón 2 — Attributes (un solo variant, 3 estados)
         attributes: {
           borderRadius: "8px",
           color: "white",
           textTransform: "uppercase",
           fontSize: "12px",
+          BorderRadius:"0",
           transition:
             "filter .15s ease, background-image .15s ease, border-color .15s ease, border-width .15s ease, transform .05s ease",
-
-          // DEFAULT (steel/negro)
+          // Default: steel
           bgGradient:
             "radial-gradient(196.62% 50% at 50% 50%, rgba(191,191,191,0.27) 0%, rgba(104,104,106,0.35) 69.53%, rgba(17,17,20,0.40) 100%)",
           border: "1px solid rgba(255,255,255,0.12)",
           boxShadow: "0 4px 4px rgba(0,0,0,0.25)",
-
-          // HOVER (red glass)
           _hover: {
+            // Red glass
             bgGradient:
               "radial-gradient(531.76% 50% at 50% 50%, rgba(223,30,51,0.70) 0%, rgba(169,23,39,0.70) 62.02%, rgba(86,0,0,0.70) 100%)",
             borderColor: "#DF1E33",
             filter: "brightness(1.03)",
           },
-
-          // ACTIVE (rojo sólido + borde 2px)
           _active: {
+            // Rojo sólido + borde 2px
             transform: "translateY(1px)",
             filter: "brightness(0.98)",
-            bg: "brand.500",             // #DF1E33 sólido
+            bg: "brand.500",
             borderWidth: "2px",
             borderColor: "#DF1E33",
           },
         },
       },
-
-      // Defaults globales (cámbialos si querés)
       defaultProps: { variant: "cta", size: "cta" },
+    },
+
+    Card: {
+      variants: {
+        // Card normal
+        item: {
+          container: {
+            display: "flex",
+            padding: "0px",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "flex-start",
+            gap: "16px",
+            alignSelf: "stretch",
+            borderRadius: "16px",
+            borderWidth: "1px",
+            borderColor: "rgba(255,255,255,0.94)",
+            bg: "#111114",
+            boxShadow: "2px 4px 10px rgba(0,0,0,0.60)",
+            overflow:"hidden",
+            transition:
+              "border-color .15s ease, transform .1s ease, box-shadow .15s ease",
+            _hover: { borderColor: "rgba(223,30,51,0.50)", overflow:"hidden", },
+            _active: {
+              transform: "translateY(1px)",
+              borderColor: "rgba(223,30,51,0.50)",
+              overflow:"hidden",
+            },
+          },
+          body: { p: "0px", display:"flex", flexDirection:"column", gap:"16px" },
+        },
+
+        // Card seleccionada
+        itemSelected: {
+          container: {
+            display: "flex",
+            padding: "0px",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "flex-start",
+            gap: "16px",
+            alignSelf: "stretch",
+            borderRadius: "16px",
+            borderWidth: "1px",
+            borderColor: "rgba(223,30,51,0.50)",
+            bg: "#111114",
+            boxShadow: "2px 4px 12px rgba(0,0,0,0.65)",
+            overflow:"hidden",
+            transition:
+              "border-color .15s ease, transform .1s ease, box-shadow .15s ease",
+            _hover: { borderColor: "rgba(223,30,51,0.60)", overflow:"hidden",},
+            _active: {
+              transform: "translateY(1px)",
+              borderColor: "rgba(223,30,51,0.60)",
+              overflow:"hidden",
+            },
+          },
+          body: { p: "0px", display:"flex", flexDirection:"column", gap:"16px" },
+        },
+      },
     },
   },
 
   /* =========================
-   * ESTILO GLOBAL (fondo oscuro)
+   * TEXT STYLES
+   * ========================= */
+  textStyles: {
+    itemTitle: {
+      color: "#FFF",
+      fontFamily: "'Chakra Petch', sans-serif",
+      fontSize: "16px",
+      fontWeight: 700,
+      lineHeight: "normal",
+    },
+    itemInfo: {
+      color: "var(--Quaternary, #BFBFBF)",
+      fontFamily: "'Chakra Petch', sans-serif",
+      fontSize: "16px",
+      fontWeight: 400,
+      lineHeight: "normal",
+    },
+  },
+
+  /* =========================
+   * ESTILO GLOBAL
    * ========================= */
   styles: {
     global: {
@@ -155,10 +237,6 @@ const UndeadBlocks = extendTheme({
       },
     },
   },
-
-  // (Opcional) usar Chakra Petch global
-  // fonts: { heading: "'Chakra Petch', sans-serif", body: "'Chakra Petch', sans-serif" },
 });
 
 export default UndeadBlocks;
-

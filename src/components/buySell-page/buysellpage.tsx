@@ -379,39 +379,47 @@ export default function BuySellPage({ address, chain }: Props) {
         )}
 
         {/* Grid */}
-        <Flex gap="4" wrap="wrap">
-          {pageItems.map((nft) => (
-            <Box
-              key={nft.id}
-              borderWidth="1px"
-              borderColor="chakra-border-color"
-              p="2"
-              rounded="md"
+        <Flex layerStyle="cardsGrid">
+          {pageItems.map((item) => (
+            <Card
+              key={item.id}
+              variant={selectedNFT?.id === item.id ? "itemSelected" : "item"}
+              onClick={() => setSelectedNFT(item)}
               cursor="pointer"
-              bg={selectedNFT?.id === nft.id ? "chakra-subtle-bg" : "chakra-body-bg"}
-              onClick={() => setSelectedNFT(nft)}
             >
-              <Image src={nft.image} alt={nft.title} boxSize="96px" objectFit="cover" />
-              <Text mt="2" noOfLines={1} color="chakra-body-text">
-                {nft.title}
-              </Text>
+              <CardBody>
+                {/* Imagen con 2 fondos (contain + cover), como en tu Figma */}
+                <Box
+                  layerStyle="itemImage"
+                  bgImage={`url(${item.image}), url(${item.image})`}
+                />
 
-              {/* Attributes button */}
-              <Flex mt="2" justify="flex-end">
+                {/* Summary */}
+                <Box layerStyle="itemSummary">
+                  <Text textStyle="itemTitle" noOfLines={1}>
+                    {item.title}
+                  </Text>
+                  {/* ejemplos de info extra:
+                  <Text textStyle="itemInfo" noOfLines={1}>ID: {item.idShort}</Text>
+                  <Text textStyle="itemInfo" noOfLines={1}>Stock: {item.stock}</Text>
+                  */}
+                </Box>
+
+                {/* Botón 2 (un solo variant con 3 estados) */}
                 <Button
                   size="attr"
                   variant="attributes"
-                  colorScheme=""
+                  mt="4"
                   onClick={(e) => {
-                    e.stopPropagation(); // avoid selecting the card
-                    setAttrItem(nft);
+                    e.stopPropagation();
+                    setAttrItem(item);
                     setAttrOpen(true);
                   }}
                 >
-                  Attributes
+                  ATTRIBUTES
                 </Button>
-              </Flex>
-            </Box>
+              </CardBody>
+            </Card>
           ))}
         </Flex>
 
