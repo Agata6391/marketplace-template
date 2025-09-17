@@ -89,7 +89,7 @@ const UndeadBlocks = extendTheme({
         cta: {
           borderRadius: "0px",
           color: "white",
-          bgImage: "url('/textures/cta-red.png')",
+          bgImage: "url('/images/assets/button.png')",
           bgSize: "cover",
           bgPos: "50% 50%",
           bgRepeat: "no-repeat",
@@ -98,13 +98,13 @@ const UndeadBlocks = extendTheme({
           transition:
             "filter .15s ease, background-image .15s ease, border-color .15s ease, transform .05s ease, box-shadow .15s ease",
           _hover: {
-            filter: "brightness(1.06)",
+            filter: "brightness(1.3)",
             borderColor: "rgba(223,30,51,0.75)",
             boxShadow: "0 6px 8px rgba(0,0,0,0.45)",
           },
           _active: {
             transform: "translateY(1px)",
-            filter: "brightness(1.12)",
+            filter: "brightness(1.3)",
             borderColor: "rgba(223,30,51,0.42)",
             boxShadow: "0 4px 4px rgba(0,0,0,0.25)",
             textShadow: "0 1px 2px rgba(0,0,0,0.50)",
@@ -113,11 +113,10 @@ const UndeadBlocks = extendTheme({
 
         // Botón 2 — Attributes (un solo variant, 3 estados)
         attributes: {
-          borderRadius: "8px",
+          borderRadius: "0px",
           color: "white",
           textTransform: "uppercase",
           fontSize: "12px",
-          BorderRadius:"0",
           transition:
             "filter .15s ease, background-image .15s ease, border-color .15s ease, border-width .15s ease, transform .05s ease",
           // Default: steel
