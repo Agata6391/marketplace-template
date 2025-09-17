@@ -48,6 +48,7 @@ function fmtPrice(price?: string | number, currency?: string) {
 
 export default function MarketBoard() {
   const account = useActiveAccount();
+  const isConnected = !!account?.address; // wallet connection state
 
   // Attributes modal state
   const [attrOpen, setAttrOpen] = useState(false);
@@ -97,11 +98,8 @@ export default function MarketBoard() {
       return;
     }
     if (REMOVE_MODE === "mutate") {
-      // Option A: if your store implements markSold
-      // marketStore.markSold?.(id, account.address);
-      // Option B: remove item from store
       marketStore.remove(id);
-      setAll(marketStore.all());
+      setAll(marketStore.all()); // refresh UI immediately
     }
     window.alert("Purchase completed.");
   };
@@ -113,7 +111,7 @@ export default function MarketBoard() {
     }
     if (REMOVE_MODE === "mutate") {
       marketStore.remove(id);
-      setAll(marketStore.all());
+      setAll(marketStore.all()); // refresh UI immediately
     }
     window.alert("Listing removed.");
   };
@@ -135,7 +133,7 @@ export default function MarketBoard() {
             <Text>No listings yet.</Text>
           ) : (
             <>
-              {/* GRID */}
+              {/* Grid */}
               <Flex className="udb-market__grid" gap="4" wrap="wrap">
                 {pageItems.map((l) => (
                   <Box
@@ -174,7 +172,7 @@ export default function MarketBoard() {
                           size="xs"
                           variant="outline"
                           onClick={() => {
-                            setAttrItem(l as any); // supports optional attributes if you add them later
+                            setAttrItem(l as any); // safe even if attributes are not present yet
                             setAttrOpen(true);
                           }}
                         >
@@ -186,86 +184,63 @@ export default function MarketBoard() {
                     {/* Actions */}
                     <Flex mt="3" gap="2">
                       {isOwner(l.seller) ? (
-                        // OWNER: show Remove (handle Tooltip correctly)
-                        !account?.address ? (
-                          // Disabled button without Tooltip (Tooltip + disabled breaks)
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            colorScheme="red"
-                            isDisabled
-                            className="udb-btn udb-btn--remove"
-                            w="full"
-                          >
-                            Remove
-                          </Button>
-                        ) : (
-                          // Tooltip must have exactly ONE child; wrap Button in a span
-                          <Tooltip label="Remove">
-                            <span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                colorScheme="red"
-                                onClick={() => onRemove(l.id)}
-                                className="udb-btn udb-btn--remove"
-                                w="full"
-                              >
-                                Remove
-                              </Button>
-                            </span>
-                          </Tooltip>
-                        )
+                        // Owner: Remove button with tooltip when disconnected
+                        <Tooltip
+                          isDisabled={isConnected}
+                          label="Connect a wallet."
+                          placement="top"
+                          hasArrow
+                        >
+                          {/* Wrap disabled button in span so Tooltip still works */}
+                          <span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorScheme="red"
+                              onClick={() => onRemove(l.id)}
+                              isDisabled={!isConnected}
+                              className="udb-btn udb-btn--remove"
+                              w="full"
+                            >
+                              Remove
+                            </Button>
+                          </span>
+                        </Tooltip>
                       ) : (
-                        // NOT OWNER: show Buy (same Tooltip rule)
-                        !account?.address ? (
-                          <Button
-                            size="sm"
-                            colorScheme="purple"
-                            isDisabled
-                            className="udb-btn udb-btn--buy"
-                            w="full"
-                          >
-                            Buy
-                          </Button>
-                        ) : (
-                          <Tooltip label="Buy">
-                            <span>
-                              <Button
-                                size="sm"
-                                colorScheme="purple"
-                                onClick={() => onBuy(l.id)}
-                                className="udb-btn udb-btn--buy"
-                                w="full"
-                              >
-                                Buy
-                              </Button>
-                            </span>
-                          </Tooltip>
-                        )
+                        // Not owner: Buy button with tooltip when disconnected
+                        <Tooltip
+                          isDisabled={isConnected}
+                          label="Connect a wallet."
+                          placement="top"
+                          hasArrow
+                        >
+                          <span>
+                            <Button
+                              size="sm"
+                              colorScheme="purple"
+                              onClick={() => onBuy(l.id)}
+                              isDisabled={!isConnected}
+                              className="udb-btn udb-btn--buy"
+                              w="full"
+                            >
+                              Buy
+                            </Button>
+                          </span>
+                        </Tooltip>
                       )}
                     </Flex>
 
                     {/* Meta seller */}
                     <Text mt="2" fontSize="xs" color="gray.500">
-                      Seller:{" "}
-                      {l.seller
-                        ? `${l.seller.slice(0, 6)}…${l.seller.slice(-4)}`
-                        : "—"}
+                      Seller: {l.seller ? `${l.seller.slice(0, 6)}…${l.seller.slice(-4)}` : "—"}
                     </Text>
                   </Box>
                 ))}
               </Flex>
 
-              {/* PAGINATION */}
+              {/* Pagination */}
               {totalPages > 1 && (
-                <Flex
-                  mt="16px"
-                  align="center"
-                  justify="center"
-                  gap="2"
-                  className="udb-pagination"
-                >
+                <Flex mt="16px" align="center" justify="center" gap="2" className="udb-pagination">
                   <Button
                     size="sm"
                     variant="ghost"
