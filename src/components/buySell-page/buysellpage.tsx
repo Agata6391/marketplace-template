@@ -3,41 +3,66 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Card, CardHeader, CardBody, Heading, Text, Flex, Box, Image, Button,
+  Card,
+  CardHeader,
+  CardBody,
+  Heading,
+  Text,
+  Flex,
+  Box,
+  Image,
+  Button,
 } from "@chakra-ui/react";
 
 import { client } from "@/consts/client";
 import type { Chain } from "thirdweb";
 import {
-  useActiveAccount, useActiveWalletChain, useSwitchActiveWalletChain,
-  useReadContract, TransactionButton,
+  useActiveAccount,
+  useActiveWalletChain,
+  useSwitchActiveWalletChain,
+  useReadContract,
+  TransactionButton,
 } from "thirdweb/react";
 import {
-  getContract, getNFT, prepareContractCall, sendAndConfirmTransaction,
+  getContract,
+  getNFT,
+  prepareContractCall,
+  sendAndConfirmTransaction,
 } from "thirdweb";
 import { getOwnedTokenIds, isApprovedForAll } from "thirdweb/extensions/erc721";
 import { hederaMainnet } from "@/consts/chains";
 
-// Optional modules already used by the modals
+// Local listing/auction (kept for live compatibility if you want to reuse logic inside modals)
+import CreateListingLocal from "@/components/buySell-page/CreateListingLocal";
+import CreateAuction from "@/components/auctions/CreateAuction";
+
+// Attribute details modal
 import NftAttributesModal from "@/components/nft/NftAttributesModal";
 
-// New modals
+// Action modals
 import SendNftModal from "@/components/modals/SendNftModal";
 import ListNftModal from "@/components/modals/ListNftModal";
 import AuctionNftModal from "@/components/modals/AuctionNftModal";
 
 type Props = {
-  address?: string;
-  chain?: Chain;
+  address?: string; // collection address may be empty/invalid; fallback to local view
+  chain?: Chain;    // optional chain; defaults to hederaMainnet
 };
 
 type Trait = { trait_type?: string; value?: any; display_type?: string };
-type NftItem = { id: string; title: string; image: string; attributes?: Trait[] };
+type NftItem = {
+  id: string;
+  title: string;
+  image: string;
+  attributes?: Trait[];
+};
 
-// Helpers
+// --- Helpers ---
 function ipfsToHttp(uri?: string) {
   if (!uri) return "";
-  return uri.startsWith("ipfs://") ? `https://ipfs.io/ipfs/${uri.slice(7)}` : uri;
+  return uri.startsWith("ipfs://")
+    ? `https://ipfs.io/ipfs/${uri.slice(7)}`
+    : uri;
 }
 function isValidAddress(addr?: string) {
   return !!addr && /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -47,11 +72,14 @@ function getPageWindow(current: number, total: number, max = 5) {
   const half = Math.floor(max / 2);
   let start = Math.max(1, current - half);
   let finish = start + max - 1;
-  if (finish > total) { finish = total; start = total - max + 1; }
+  if (finish > total) {
+    finish = total;
+    start = total - max + 1;
+  }
   return Array.from({ length: finish - start + 1 }, (_, i) => start + i);
 }
 
-// Dummy items when no contract is configured
+// Local fallback NFTs when no valid contract address is configured
 const DEFAULT_ITEMS: NftItem[] = [
   {
     id: "1",
@@ -109,7 +137,10 @@ const DEFAULT_ITEMS: NftItem[] = [
   },
 ];
 
+// Marketplace address (replace with a real one on live)
 const MARKETPLACE_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+
+// Page size for "My NFTs"
 const PAGE_SIZE = 5;
 
 export default function BuySellPage({ address, chain }: Props) {
@@ -117,31 +148,59 @@ export default function BuySellPage({ address, chain }: Props) {
   const activeChain = useActiveWalletChain();
   const switchChain = useSwitchActiveWalletChain();
 
+  // Always have a valid chain (fallback to Hedera Mainnet)
   const effectiveChain: Chain = chain ?? hederaMainnet;
+
+  // Fallback flag for local/dummy view
   const useLocalFallback = !isValidAddress(address);
 
+  // Contract handles (real or dummy)
   const realContract = useMemo(
-    () => (useLocalFallback ? null : getContract({ client, chain: effectiveChain, address: address! })),
+    () =>
+      useLocalFallback
+        ? null
+        : getContract({ client, chain: effectiveChain, address: address! }),
     [useLocalFallback, effectiveChain, address]
   );
 
   const dummyContract = useMemo(
-    () => getContract({ client, chain: effectiveChain, address: "0x0000000000000000000000000000000000000001" }),
+    () =>
+      getContract({
+        client,
+        chain: effectiveChain,
+        address: "0x0000000000000000000000000000000000000001",
+      }),
     [effectiveChain]
   );
 
-  const { data: ownedIds, isLoading, error } = useReadContract(getOwnedTokenIds, {
+  // Read owned token ids
+  const {
+    data: ownedIds,
+    isLoading,
+    error,
+  } = useReadContract(getOwnedTokenIds, {
     contract: useLocalFallback ? dummyContract : (realContract as any),
     owner: account?.address,
-    queryOptions: { enabled: !useLocalFallback && !!realContract && !!account?.address },
+    queryOptions: {
+      enabled: !useLocalFallback && !!realContract && !!account?.address,
+    },
   });
 
-  const { data: isApproved, refetch: refetchApproval, isLoading: isLoadingApproval } = useReadContract(isApprovedForAll, {
+  // Approval state (only meaningful with a real contract)
+  const {
+    data: isApproved,
+    refetch: refetchApproval,
+    isLoading: isLoadingApproval,
+  } = useReadContract(isApprovedForAll, {
     contract: useLocalFallback ? dummyContract : (realContract as any),
     owner: account?.address,
     operator: MARKETPLACE_ADDRESS,
     queryOptions: {
-      enabled: !useLocalFallback && !!realContract && !!account?.address && /^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS),
+      enabled:
+        !useLocalFallback &&
+        !!realContract &&
+        !!account?.address &&
+        /^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS),
     },
   });
 
@@ -149,14 +208,53 @@ export default function BuySellPage({ address, chain }: Props) {
   const [selectedNFT, setSelectedNFT] = useState<NftItem | null>(null);
   const [status, setStatus] = useState("");
 
-  // Attributes modal
+  // Attributes modal state
   const [attrOpen, setAttrOpen] = useState(false);
   const [attrItem, setAttrItem] = useState<NftItem | null>(null);
 
-  // Action modals
+  // Action modals state
   const [sendOpen, setSendOpen] = useState(false);
-  const [sellOpen, setSellOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [auctionOpen, setAuctionOpen] = useState(false);
+
+  // Toggle a single action modal and ensure others are closed
+  function toggleModal(which: "send" | "list" | "auction") {
+    if (which === "send") {
+      setSendOpen((v) => {
+        const next = !v;
+        if (next) {
+          setListOpen(false);
+          setAuctionOpen(false);
+        }
+        return next;
+      });
+    } else if (which === "list") {
+      setListOpen((v) => {
+        const next = !v;
+        if (next) {
+          setSendOpen(false);
+          setAuctionOpen(false);
+        }
+        return next;
+      });
+    } else {
+      setAuctionOpen((v) => {
+        const next = !v;
+        if (next) {
+          setSendOpen(false);
+          setListOpen(false);
+        }
+        return next;
+      });
+    }
+  }
+
+  // Close modals when selection changes
+  useEffect(() => {
+    setSendOpen(false);
+    setListOpen(false);
+    setAuctionOpen(false);
+  }, [selectedNFT]);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -165,6 +263,7 @@ export default function BuySellPage({ address, chain }: Props) {
   const end = start + PAGE_SIZE;
   const pageItems = items.slice(start, end);
 
+  // Keep page/selection consistent
   useEffect(() => {
     if (page > totalPages) setPage(1);
     if (selectedNFT && !pageItems.find((i) => i.id === selectedNFT.id)) {
@@ -173,7 +272,7 @@ export default function BuySellPage({ address, chain }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, page, totalPages]);
 
-  // Load NFTs
+  // Load NFTs (fallback or on-chain)
   useEffect(() => {
     let ignore = false;
     async function load() {
@@ -190,18 +289,24 @@ export default function BuySellPage({ address, chain }: Props) {
         ownedIds.map(async (id) => {
           const nft = await getNFT({ contract: realContract, tokenId: id });
           const title = nft.metadata?.name || `NFT #${id}`;
-          const image = ipfsToHttp(nft.metadata?.image || nft.metadata?.image_url) || "/images/dummynfts/default-nft.png";
-          const attributes = Array.isArray(nft.metadata?.attributes) ? nft.metadata?.attributes : [];
+          const image =
+            ipfsToHttp(nft.metadata?.image || nft.metadata?.image_url) ||
+            "/images/dummynfts/default-nft.png";
+          const attributes = Array.isArray(nft.metadata?.attributes)
+            ? nft.metadata?.attributes
+            : [];
           return { id: id.toString(), title, image, attributes };
         })
       );
       if (!ignore) setItems(details);
     }
     load();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [useLocalFallback, ownedIds, realContract]);
 
-  // Ensure correct chain before real send
+  // Ensure correct chain before sending (live mode)
   async function ensureChain() {
     if (useLocalFallback) return;
     try {
@@ -213,52 +318,75 @@ export default function BuySellPage({ address, chain }: Props) {
     }
   }
 
-  // Confirm send (called from Send modal)
-  async function onConfirmSend(toAddress: string) {
-    if (useLocalFallback) return;
+  // Example send (live) - remains here if you use it from SendNftModal later
+  async function handleSend() {
+    if (useLocalFallback) {
+      setStatus("Sending is not available in this view.");
+      return;
+    }
     if (!account || !selectedNFT || !realContract) return;
-
     try {
       await ensureChain();
+      const to = prompt("Destination address:");
+      if (!to) return;
+
       setStatus(`Sending ${selectedNFT.title || `#${selectedNFT.id}`}...`);
 
       const tx = prepareContractCall({
         contract: realContract,
         method: "safeTransferFrom",
-        params: [account.address, toAddress, BigInt(selectedNFT.id)],
+        params: [account.address, to, BigInt(selectedNFT.id)],
       });
 
       await sendAndConfirmTransaction({ account, transaction: tx });
       setStatus("NFT sent.");
       window.alert("NFT sent successfully.");
       setSelectedNFT(null);
-      setSendOpen(false);
     } catch (e: any) {
       setStatus(`Send failed: ${e?.message || e}`);
     }
   }
 
   return (
-    <Card borderWidth="1px" borderColor="chakra-border-color" bg="chakra-body-bg" maxW="90vw" mx="auto" mt="40px">
+    <Card
+      borderWidth="1px"
+      borderColor="chakra-border-color"
+      bg="chakra-body-bg"
+      maxW="90vw"
+      mx="auto"
+      mt="40px"
+    >
       <CardHeader>
-        <Heading size="md" color="chakra-body-text">Buy & Sell — {effectiveChain.name}</Heading>
-        <Text fontSize="xs" color="chakra-subtle-text">{address || "No contract address configured"}</Text>
+        <Heading size="md" color="chakra-body-text">
+          Buy & Sell — {effectiveChain.name}
+        </Heading>
+        <Text fontSize="xs" color="chakra-subtle-text">
+          {address || "No contract address configured"}
+        </Text>
       </CardHeader>
 
       <CardBody>
         <Box mb="4">
           <Text color="chakra-body-text">Your wallet NFTs for this collection:</Text>
           {!account?.address ? (
-            <Text fontSize="sm" mt="2">Connect a wallet using the header button.</Text>
+            <Text fontSize="sm" mt="2">
+              Connect a wallet using the header button.
+            </Text>
           ) : (
-            <Text fontSize="sm" mt="2">Connected: {account.address}</Text>
+            <Text fontSize="sm" mt="2">
+              Connected: {account.address}
+            </Text>
           )}
         </Box>
 
-        {!useLocalFallback && isLoading && <Text color="chakra-subtle-text">Loading NFTs...</Text>}
-        {!useLocalFallback && error && <Text color="red.500">Error: {String(error)}</Text>}
+        {!useLocalFallback && isLoading && (
+          <Text color="chakra-subtle-text">Loading NFTs...</Text>
+        )}
+        {!useLocalFallback && error && (
+          <Text color="red.500">Error: {String(error)}</Text>
+        )}
 
-        {/* GRID */}
+        {/* Grid */}
         <Flex gap="4" wrap="wrap">
           {pageItems.map((nft) => (
             <Box
@@ -268,11 +396,15 @@ export default function BuySellPage({ address, chain }: Props) {
               p="2"
               rounded="md"
               cursor="pointer"
-              bg={selectedNFT?.id === nft.id ? "chakra-subtle-bg" : "chakra-body-bg"}
+              bg={
+                selectedNFT?.id === nft.id ? "chakra-subtle-bg" : "chakra-body-bg"
+              }
               onClick={() => setSelectedNFT(nft)}
             >
               <Image src={nft.image} alt={nft.title} boxSize="96px" objectFit="cover" />
-              <Text mt="2" noOfLines={1} color="chakra-body-text">{nft.title}</Text>
+              <Text mt="2" noOfLines={1} color="chakra-body-text">
+                {nft.title}
+              </Text>
 
               {/* Attributes button */}
               <Flex mt="2" justify="flex-end">
@@ -281,7 +413,7 @@ export default function BuySellPage({ address, chain }: Props) {
                   variant="outline"
                   colorScheme="gray"
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // avoid selecting the card
                     setAttrItem(nft);
                     setAttrOpen(true);
                   }}
@@ -299,7 +431,10 @@ export default function BuySellPage({ address, chain }: Props) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setPage((p) => Math.max(1, p - 1)); setSelectedNFT(null); }}
+              onClick={() => {
+                setPage((p) => Math.max(1, p - 1));
+                setSelectedNFT(null);
+              }}
               isDisabled={page === 1}
             >
               &lt; PREVIOUS
@@ -310,7 +445,10 @@ export default function BuySellPage({ address, chain }: Props) {
                 key={p}
                 size="sm"
                 variant={p === page ? "solid" : "ghost"}
-                onClick={() => { setPage(p); setSelectedNFT(null); }}
+                onClick={() => {
+                  setPage(p);
+                  setSelectedNFT(null);
+                }}
               >
                 {p}
               </Button>
@@ -319,7 +457,10 @@ export default function BuySellPage({ address, chain }: Props) {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); setSelectedNFT(null); }}
+              onClick={() => {
+                setPage((p) => Math.min(totalPages, p + 1));
+                setSelectedNFT(null);
+              }}
               isDisabled={page === totalPages}
             >
               NEXT &gt;
@@ -327,31 +468,40 @@ export default function BuySellPage({ address, chain }: Props) {
           </Flex>
         )}
 
-        {/* Actions */}
+        {/* Actions for the selected NFT */}
         {selectedNFT && (
           <Box mt="6">
-            <Text>Action:</Text>
+            <Text color="chakra-body-text">Action:</Text>
 
-            {/* Approval (only for real contract) */}
+            {/* Approval (real contract only) */}
             {!useLocalFallback && (
               <Box mt="2">
                 {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
-                  <Text color="orange.500" fontSize="sm">Marketplace address not configured.</Text>
+                  <Text color="orange.500" fontSize="sm">
+                    Marketplace address not configured.
+                  </Text>
                 ) : isLoadingApproval ? (
                   <Text fontSize="sm">Checking approval…</Text>
                 ) : isApproved ? (
-                  <Text fontSize="sm" color="green.500">Marketplace approved for this collection.</Text>
+                  <Text fontSize="sm" color="green.500">
+                    Marketplace approved for this collection.
+                  </Text>
                 ) : (
                   <TransactionButton
                     transaction={async () => {
-                      await ensureChain();
+                      // make sure user is on the right chain
+                      if (activeChain?.id !== effectiveChain.id) {
+                        await switchChain(effectiveChain);
+                      }
                       return prepareContractCall({
-                        contract: realContract!,
+                        contract: realContract!, // safe here
                         method: "setApprovalForAll",
                         params: [MARKETPLACE_ADDRESS, true],
                       });
                     }}
-                    onTransactionConfirmed={() => { refetchApproval(); }}
+                    onTransactionConfirmed={() => {
+                      refetchApproval();
+                    }}
                     style={{ marginTop: 8 }}
                   >
                     Approve Marketplace
@@ -360,25 +510,25 @@ export default function BuySellPage({ address, chain }: Props) {
               </Box>
             )}
 
-            {/* Open modals */}
-            <Flex gap="3" mt="4" wrap="wrap">
-              <Button colorScheme="red" onClick={() => setSendOpen(true)}>
+            {/* Open action modals */}
+            <Flex gap="3" mt="4">
+              <Button colorScheme="red" onClick={() => toggleModal("send")}>
                 Send
               </Button>
-              {account?.address && (
-                <>
-                  <Button
-                    variant="outline"
-                    colorScheme="gray"
-                    onClick={() => setSellOpen(true)}
-                  >
-                    Sell
-                  </Button>
-                  <Button colorScheme="purple" onClick={() => setAuctionOpen(true)}>
-                    Auction
-                  </Button>
-                </>
-              )}
+              <Button
+                colorScheme="purple"
+                onClick={() => toggleModal("list")}
+                isDisabled={!account?.address}
+              >
+                Sell
+              </Button>
+              <Button
+                colorScheme="orange"
+                onClick={() => toggleModal("auction")}
+                isDisabled={!account?.address}
+              >
+                Auction
+              </Button>
             </Flex>
           </Box>
         )}
@@ -397,48 +547,42 @@ export default function BuySellPage({ address, chain }: Props) {
           chain={hederaMainnet}
         />
 
-        {/* Action Modals (open only when an NFT is selected) */}
-        {selectedNFT && (
-          <>
-            <SendNftModal
-              isOpen={sendOpen}
-              onClose={() => setSendOpen(false)}
-              disabled={useLocalFallback}
-              from={account?.address || null}
-              name={selectedNFT.title}
-              image={selectedNFT.image}
-              tokenId={selectedNFT.id}
-              onConfirm={onConfirmSend}
-            />
+        {/* Action Modals */}
+        <SendNftModal
+          isOpen={sendOpen}
+          onClose={() => setSendOpen(false)}
+          chain={hederaMainnet}
+          name={selectedNFT?.title}
+          image={selectedNFT?.image}
+          tokenId={selectedNFT?.id}
+          collection={address || ""}
+          // You can pass a callback that uses handleSend on live mode if needed
+        />
 
-            {account?.address && (
-              <ListNftModal
-                isOpen={sellOpen}
-                onClose={() => setSellOpen(false)}
-                seller={account.address}
-                collection={address || "0x000000000000000000000000000000000000dEaD"}
-                tokenId={selectedNFT.id}
-                name={selectedNFT.title}
-                image={selectedNFT.image}
-                onListed={() => setStatus("Listing created.")}
-              />
-            )}
+        <ListNftModal
+          isOpen={listOpen}
+          onClose={() => setListOpen(false)}
+          name={selectedNFT?.title}
+          image={selectedNFT?.image}
+          tokenId={selectedNFT?.id}
+          collection={address || "0x000000000000000000000000000000000000dEaD"}
+          seller={account?.address || ""}
+        />
 
-            {account?.address && (
-              <AuctionNftModal
-                isOpen={auctionOpen}
-                onClose={() => setAuctionOpen(false)}
-                seller={account.address}
-                collection={address || "0x000000000000000000000000000000000000dEaD"}
-                tokenId={selectedNFT.id}
-                name={selectedNFT.title}
-                image={selectedNFT.image}
-                onCreated={() => setStatus("Auction created.")}
-              />
-            )}
-          </>
-        )}
+        <AuctionNftModal
+          isOpen={auctionOpen}
+          onClose={() => setAuctionOpen(false)}
+          name={selectedNFT?.title}
+          image={selectedNFT?.image}
+          tokenId={selectedNFT?.id}
+          collection={address || "0x000000000000000000000000000000000000dEaD"}
+          seller={account?.address || ""}
+        />
       </CardBody>
     </Card>
   );
 }
+
+
+
+
