@@ -1,0 +1,15 @@
+/* src/app/globals.css */
+
+/* Opcional: tipografía global si usas system fonts */
+:root {
+  color-scheme: light dark;
+}
+
+/* Reseteos muy leves; Chakra ya maneja la mayoría */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+/* Si quieres, forzá que el body no tape el footer */
+body { min-height: 100dvh; }
+
+/* Deja Chakra trabajar: el fondo y color vendrán del tema UndeadBlocks */

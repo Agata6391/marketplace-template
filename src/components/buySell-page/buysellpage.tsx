@@ -399,9 +399,9 @@ export default function BuySellPage({ address, chain }: Props) {
               {/* Attributes button */}
               <Flex mt="2" justify="flex-end">
                 <Button
-                  size="xs"
-                  variant="outline"
-                  colorScheme="gray"
+                  size="attr"
+                  variant="attributes"
+                  colorScheme=""
                   onClick={(e) => {
                     e.stopPropagation(); // avoid selecting the card
                     setAttrItem(nft);
