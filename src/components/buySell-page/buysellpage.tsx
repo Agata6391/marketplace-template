@@ -12,7 +12,6 @@ import {
   Box,
   Image,
   Button,
-  Tooltip,
 } from "@chakra-ui/react";
 
 import { client } from "@/consts/client";
@@ -33,7 +32,7 @@ import {
 import { getOwnedTokenIds, isApprovedForAll } from "thirdweb/extensions/erc721";
 import { hederaMainnet } from "@/consts/chains";
 
-// Optional local actions (kept for live compatibility if you reuse logic)
+// Local listing/auction (kept for live compatibility if you want to reuse logic inside modals)
 import CreateListingLocal from "@/components/buySell-page/CreateListingLocal";
 import CreateAuction from "@/components/auctions/CreateAuction";
 
@@ -47,7 +46,7 @@ import AuctionNftModal from "@/components/modals/AuctionNftModal";
 
 type Props = {
   address?: string; // collection address may be empty/invalid; fallback to local view
-  chain?: Chain;    // optional chain; defaults to hederaMainnet
+  chain?: Chain; // optional chain; defaults to hederaMainnet
 };
 
 type Trait = { trait_type?: string; value?: any; display_type?: string };
@@ -146,6 +145,8 @@ const PAGE_SIZE = 5;
 
 export default function BuySellPage({ address, chain }: Props) {
   const account = useActiveAccount();
+  const isConnected = !!account?.address; // single source of truth for connection state
+
   const activeChain = useActiveWalletChain();
   const switchChain = useSwitchActiveWalletChain();
 
@@ -218,28 +219,40 @@ export default function BuySellPage({ address, chain }: Props) {
   const [listOpen, setListOpen] = useState(false);
   const [auctionOpen, setAuctionOpen] = useState(false);
 
-  // Connection guard
-  const isConnected = !!account?.address;
+  // Toggle a single action modal and ensure others are closed.
+  // When not connected, do nothing (modals will not open).
+  function toggleModal(which: "send" | "list" | "auction") {
+    if (!isConnected) return;
 
-  // Centralized opener: prevents opening when wallet is disconnected
-  function openAction(which: "send" | "list" | "auction") {
-    if (!isConnected) {
-      window.alert("Connect a wallet to continue.");
-      return;
+    if (which === "send") {
+      setSendOpen((v) => {
+        const next = !v;
+        if (next) {
+          setListOpen(false);
+          setAuctionOpen(false);
+        }
+        return next;
+      });
+    } else if (which === "list") {
+      setListOpen((v) => {
+        const next = !v;
+        if (next) {
+          setSendOpen(false);
+          setAuctionOpen(false);
+        }
+        return next;
+      });
+    } else {
+      setAuctionOpen((v) => {
+        const next = !v;
+        if (next) {
+          setSendOpen(false);
+          setListOpen(false);
+        }
+        return next;
+      });
     }
-    setSendOpen(which === "send");
-    setListOpen(which === "list");
-    setAuctionOpen(which === "auction");
   }
-
-  // Close action modals when wallet disconnects
-  useEffect(() => {
-    if (!isConnected) {
-      setSendOpen(false);
-      setListOpen(false);
-      setAuctionOpen(false);
-    }
-  }, [isConnected]);
 
   // Close modals when selection changes
   useEffect(() => {
@@ -310,7 +323,7 @@ export default function BuySellPage({ address, chain }: Props) {
     }
   }
 
-  // Example send (live) - remains here if you wire it into SendNftModal later
+  // Example send (live). Kept for potential reuse in SendNftModal.
   async function handleSend() {
     if (useLocalFallback) {
       setStatus("Sending is not available in this view.");
@@ -359,8 +372,10 @@ export default function BuySellPage({ address, chain }: Props) {
 
       <CardBody>
         <Box mb="4">
-          <Text color="chakra-body-text">Your wallet NFTs for this collection:</Text>
-          {!account?.address ? (
+          <Text color="chakra-body-text">
+            Your wallet NFTs for this collection:
+          </Text>
+          {!isConnected ? (
             <Text fontSize="sm" mt="2">
               Connect a wallet using the header button.
             </Text>
@@ -379,47 +394,48 @@ export default function BuySellPage({ address, chain }: Props) {
         )}
 
         {/* Grid */}
-        <Flex layerStyle="cardsGrid">
-          {pageItems.map((item) => (
-            <Card
-              key={item.id}
-              variant={selectedNFT?.id === item.id ? "itemSelected" : "item"}
-              onClick={() => setSelectedNFT(item)}
+        <Flex gap="4" wrap="wrap">
+          {pageItems.map((nft) => (
+            <Box
+              key={nft.id}
+              borderWidth="1px"
+              borderColor="chakra-border-color"
+              p="2"
+              rounded="md"
               cursor="pointer"
+              bg={
+                selectedNFT?.id === nft.id
+                  ? "chakra-subtle-bg"
+                  : "chakra-body-bg"
+              }
+              onClick={() => setSelectedNFT(nft)}
             >
-              <CardBody>
-                {/* Imagen con 2 fondos (contain + cover), como en tu Figma */}
-                <Box
-                  layerStyle="itemImage"
-                  bgImage={`url(${item.image}), url(${item.image})`}
-                />
+              <Image
+                src={nft.image}
+                alt={nft.title}
+                boxSize="96px"
+                objectFit="cover"
+              />
+              <Text mt="2" noOfLines={1} color="chakra-body-text">
+                {nft.title}
+              </Text>
 
-                {/* Summary */}
-                <Box layerStyle="itemSummary">
-                  <Text textStyle="itemTitle" noOfLines={1}>
-                    {item.title}
-                  </Text>
-                  {/* ejemplos de info extra:
-                  <Text textStyle="itemInfo" noOfLines={1}>ID: {item.idShort}</Text>
-                  <Text textStyle="itemInfo" noOfLines={1}>Stock: {item.stock}</Text>
-                  */}
-                </Box>
-
-                {/* Botón 2 (un solo variant con 3 estados) */}
+              {/* Attributes button */}
+              <Flex mt="2" justify="flex-end">
                 <Button
-                  size="attr"
-                  variant="attributes"
-                  mt="4"
+                  size="xs"
+                  variant="outline"
+                  colorScheme="gray"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    setAttrItem(item);
+                    e.stopPropagation(); // avoid selecting the card
+                    setAttrItem(nft);
                     setAttrOpen(true);
                   }}
                 >
-                  ATTRIBUTES
+                  Attributes
                 </Button>
-              </CardBody>
-            </Card>
+              </Flex>
+            </Box>
           ))}
         </Flex>
 
@@ -471,93 +487,74 @@ export default function BuySellPage({ address, chain }: Props) {
           <Box mt="6">
             <Text color="chakra-body-text">Action:</Text>
 
-            {/* Approval (real contract only) */}
-            {!useLocalFallback && (
-              <Box mt="2">
-                {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
-                  <Text color="orange.500" fontSize="sm">
-                    Marketplace address not configured.
-                  </Text>
-                ) : isLoadingApproval ? (
-                  <Text fontSize="sm">Checking approval…</Text>
-                ) : isApproved ? (
-                  <Text fontSize="sm" color="green.500">
-                    Marketplace approved for this collection.
-                  </Text>
-                ) : (
-                  <TransactionButton
-                    transaction={async () => {
-                      // ensure user is on the right chain
-                      if (activeChain?.id !== effectiveChain.id) {
-                        await switchChain(effectiveChain);
-                      }
-                      return prepareContractCall({
-                        contract: realContract!, // safe here
-                        method: "setApprovalForAll",
-                        params: [MARKETPLACE_ADDRESS, true],
-                      });
-                    }}
-                    onTransactionConfirmed={() => {
-                      refetchApproval();
-                    }}
-                    style={{ marginTop: 8 }}
-                  >
-                    Approve Marketplace
-                  </TransactionButton>
+            {/* If not connected, show a hint and DO NOT render buttons */}
+            {!isConnected ? (
+              <Text mt="2" fontSize="sm" color="gray.500">
+                Connect a wallet to send, sell or auction this NFT.
+              </Text>
+            ) : (
+              <>
+                {/* Approval (real contract only) */}
+                {!useLocalFallback && (
+                  <Box mt="2">
+                    {!/^0x[a-fA-F0-9]{40}$/.test(MARKETPLACE_ADDRESS) ? (
+                      <Text color="orange.500" fontSize="sm">
+                        Marketplace address not configured.
+                      </Text>
+                    ) : isLoadingApproval ? (
+                      <Text fontSize="sm">Checking approval…</Text>
+                    ) : isApproved ? (
+                      <Text fontSize="sm" color="green.500">
+                        Marketplace approved for this collection.
+                      </Text>
+                    ) : (
+                      <TransactionButton
+                        transaction={async () => {
+                          if (activeChain?.id !== effectiveChain.id) {
+                            await switchChain(effectiveChain);
+                          }
+                          return prepareContractCall({
+                            contract: realContract!,
+                            method: "setApprovalForAll",
+                            params: [MARKETPLACE_ADDRESS, true],
+                          });
+                        }}
+                        onTransactionConfirmed={() => {
+                          refetchApproval();
+                        }}
+                        style={{ marginTop: 8 }}
+                      >
+                        Approve Marketplace
+                      </TransactionButton>
+                    )}
+                  </Box>
                 )}
-              </Box>
+
+                {/* Action buttons (only when connected) */}
+
+                <Flex gap="3" mt="4">
+                  {/* Enable Send even in fallback so the modal opens.
+                    The modal itself keeps "Confirm send" disabled via forceDisableConfirm. */}
+                  <Button colorScheme="red" onClick={() => toggleModal("send")}>
+                    Send
+                  </Button>
+
+                  <Button
+                    colorScheme="purple"
+                    onClick={() => toggleModal("list")}
+                  >
+                    Sell
+                  </Button>
+
+                  <Button
+                    colorScheme="orange"
+                    onClick={() => toggleModal("auction")}
+                  >
+                    Auction
+                  </Button>
+                </Flex>
+              </>
             )}
-
-            {/* Open action modals (guarded and disabled when disconnected) */}
-          {/* Action triggers with hover tooltip when disconnected */}
-<Flex gap="3" mt="4">
-  {/* Send */}
-  <Tooltip
-    // Disable the tooltip when connected so it doesn't show
-    isDisabled={isConnected}
-    label="Connect a wallet."
-    placement="top"
-    hasArrow
-  >
-    {/* Wrap disabled Button in a span so Tooltip can attach hover events */}
-    <span>
-      <Button
-        colorScheme="red"
-        onClick={() => openAction("send")}
-        isDisabled={!isConnected}
-      >
-        Send
-      </Button>
-    </span>
-  </Tooltip>
-
-  {/* Sell */}
-  <Tooltip isDisabled={isConnected} label="Connect a wallet." placement="top" hasArrow>
-    <span>
-      <Button
-        colorScheme="purple"
-        onClick={() => openAction("list")}
-        isDisabled={!isConnected}
-      >
-        Sell
-      </Button>
-    </span>
-  </Tooltip>
-
-  {/* Auction */}
-  <Tooltip isDisabled={isConnected} label="Connect a wallet." placement="top" hasArrow>
-    <span>
-      <Button
-        colorScheme="orange"
-        onClick={() => openAction("auction")}
-        isDisabled={!isConnected}
-      >
-        Auction
-      </Button>
-    </span>
-  </Tooltip>
-</Flex>
-
           </Box>
         )}
 
@@ -575,20 +572,25 @@ export default function BuySellPage({ address, chain }: Props) {
           chain={hederaMainnet}
         />
 
-        {/* Action Modals (never open when disconnected) */}
+        {/* Action Modals (they remain mounted but cannot be opened when disconnected) */}
         <SendNftModal
-          isOpen={sendOpen && isConnected}
+          isOpen={sendOpen}
           onClose={() => setSendOpen(false)}
           chain={hederaMainnet}
           name={selectedNFT?.title}
           image={selectedNFT?.image}
           tokenId={selectedNFT?.id}
           collection={address || ""}
-          // Hook up onSubmit to handleSend() when you go live
+          // pass connection state so the modal can show hints
+          isWalletConnected={isConnected}
+          // demo: keep Confirm disabled even if wallet is connected
+          forceDisableConfirm={true}
+          forceDisableReason="Sending is disabled in this demo. It will be enabled for live."
+          // onConfirm={(to) => handleSend()} // enable this on live
         />
 
         <ListNftModal
-          isOpen={listOpen && isConnected}
+          isOpen={listOpen}
           onClose={() => setListOpen(false)}
           name={selectedNFT?.title}
           image={selectedNFT?.image}
@@ -598,7 +600,7 @@ export default function BuySellPage({ address, chain }: Props) {
         />
 
         <AuctionNftModal
-          isOpen={auctionOpen && isConnected}
+          isOpen={auctionOpen}
           onClose={() => setAuctionOpen(false)}
           name={selectedNFT?.title}
           image={selectedNFT?.image}

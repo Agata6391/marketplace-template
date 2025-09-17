@@ -11,23 +11,48 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   chain: Chain;
-  isWalletConnected?: boolean;
+  isWalletConnected?: boolean;     // NEW: connection state
   name?: string;
   image?: string;
   tokenId?: string;
   collection: string;
   onConfirm?: (to: string) => void; // optional live hook
+
+  // NEW: force the confirm button to stay disabled (demo mode)
+  forceDisableConfirm?: boolean;
+  forceDisableReason?: string;
 };
 
 export default function SendNftModal({
-  isOpen, onClose, chain, isWalletConnected,
-  name, image, tokenId, collection, onConfirm,
+  isOpen,
+  onClose,
+  chain,
+  isWalletConnected,
+  name,
+  image,
+  tokenId,
+  collection,
+  onConfirm,
+  forceDisableConfirm,
+  forceDisableReason,
 }: Props) {
   const [to, setTo] = useState("");
+
+  // If forceDisableConfirm is true, the confirm button is always disabled.
   const canConfirm = useMemo(() => {
-    // Disable confirm if wallet not connected or no receiver entered
+    if (forceDisableConfirm) return false;
     return !!isWalletConnected && !!to;
-  }, [isWalletConnected, to]);
+  }, [forceDisableConfirm, isWalletConnected, to]);
+
+  // Helper text explaining why the confirm is disabled
+  const disableHint =
+    forceDisableConfirm
+      ? (forceDisableReason || "Sending is disabled.")
+      : !isWalletConnected
+        ? "Connect a wallet to confirm the transfer."
+        : !to
+          ? "Enter a destination address to continue."
+          : "";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
@@ -64,16 +89,18 @@ export default function SendNftModal({
               value={to}
               onChange={(e) => setTo(e.target.value)}
             />
-            {!isWalletConnected && (
+            {disableHint && (
               <Text mt="2" fontSize="sm" color="orange.500">
-                Connect a wallet to confirm the transfer.
+                {disableHint}
               </Text>
             )}
           </Box>
         </ModalBody>
 
         <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" mr={3} onClick={onClose}>
+            Cancel
+          </Button>
           <Button
             colorScheme="red"
             onClick={() => {
